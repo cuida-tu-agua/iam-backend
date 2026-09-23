@@ -1,0 +1,67 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ms-iam
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=sy-water-db;encrypt=true;trustServerCertificate=true
+    username: security_app
+    password: ${SECURITY_APP_PASSWORD}
+    hikari:
+      # HikariCP no registra la contraseña en logs
+      connection-test-query: SELECT 1
+      leak-detection-threshold: 60000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: security
+        use_nationalized_character_data: true
+        type.preferred_instant_jdbc_type: TIMESTAMP
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000
+  mail:
+    host: localhost
+    port: 1025
+  mvc:
+    log-request-details: false
+
+iam:
+  jwt:
+    issuer: https://iam.cuidatuagua.local
+    key-id: iam-key-1
+    access-ttl: 1h
+    refresh-ttl: 7d
+    public-key: file:./keys/public.pem
+    private-key: file:./keys/private.pem
+  email-verification-ttl: 24h
+  password-reset-ttl: 15m
+  lockout:
+    max-attempts: 5
+    duration: 15m
+  google:
+    client-ids:
+  frontend-base-url: http://localhost:19006
+
+management:
+  endpoints.web.exposure.include: health
+  endpoint:
+    health:
+      show-details: when-authorized
+  # No exponer detalles de aplicación innecesariamente
+  metrics.enabled: true
+
+# Logging seguro - No exponer detalles sensibles
+logging:
+  level:
+    com.sywater.ms_iam: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
