@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+    <changeSet id="004-seed-login-user" author="save-water">
+        <insert tableName="users">
+            <column name="id" valueComputed="UUID_TO_BIN(UUID())"/>
+            <column name="email" value="admin@savewater.local"/>
+            <column name="password_hash" value="$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"/>
+        </insert>
+        <sql>INSERT INTO user_roles (user_id, role_id) SELECT u.id, r.id FROM users u CROSS JOIN roles r WHERE u.email = 'admin@savewater.local' AND r.name = 'ADMIN'</sql>
+    </changeSet>
+</databaseChangeLog>

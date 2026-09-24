@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+    <changeSet id="001-create-users-table" author="save-water">
+        <createTable tableName="users">
+            <column name="id" type="BINARY(16)"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="email" type="VARCHAR(150)"><constraints unique="true" nullable="false"/></column>
+            <column name="password_hash" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP(6)" defaultValueDate="2026-01-01T00:00:00"><constraints nullable="true"/></column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>
