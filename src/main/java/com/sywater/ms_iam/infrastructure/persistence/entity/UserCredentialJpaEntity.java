@@ -3,9 +3,7 @@ package com.sywater.ms_iam.infrastructure.persistence.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-
+import java.util.UUID;
 
 @Entity
 @Table(name = "user_credentials", schema = "security")
@@ -16,7 +14,7 @@ public class UserCredentialJpaEntity {
     private Long id;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private UUID userId;
 
     @Column(name = "credential_type", nullable = false)
     private String credentialType;
@@ -27,9 +25,13 @@ public class UserCredentialJpaEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // Constructor sin parámetros (OBLIGATORIO para Hibernate/JPA)
+    public UserCredentialJpaEntity() {
+    }
 
-    public UserCredentialJpaEntity(String userId, String passwordHash) {
-        this.userId = Long.parseLong(userId);
+    // Constructor personalizado para crear credenciales
+    public UserCredentialJpaEntity(UUID userId, String passwordHash) {
+        this.userId = userId;
         this.credentialType = "LOCAL";
         this.passwordHash = passwordHash;
         this.createdAt = LocalDateTime.now(ZoneId.of("UTC"));
@@ -40,7 +42,7 @@ public class UserCredentialJpaEntity {
         return id;
     }
 
-    public Long getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
@@ -61,7 +63,7 @@ public class UserCredentialJpaEntity {
         this.id = id;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 

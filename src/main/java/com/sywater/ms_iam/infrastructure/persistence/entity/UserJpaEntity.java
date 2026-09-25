@@ -2,14 +2,15 @@ package com.sywater.ms_iam.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users", schema = "security")
 public class UserJpaEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
@@ -47,7 +48,7 @@ public class UserJpaEntity {
     }
 
     // Getters & Setters
-    public Long getId() { return id; }
+    public UUID getId() { return id; }
     public String getEmail() { return email; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }

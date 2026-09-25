@@ -47,8 +47,7 @@ public class LoginUseCase {
         UserJpaEntity user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
-        // Buscar credencial - convertir Long a String
-        UserCredentialJpaEntity credential = credentialRepository.findByUserId(String.valueOf(user.getId()))
+        UserCredentialJpaEntity credential = credentialRepository.findByUserId(user.getId())
                 .orElseThrow(() -> {
                     logger.error("Credential not found for user: {}", user.getId());
                     return new InvalidCredentialsException("Invalid email or password");
@@ -60,7 +59,6 @@ public class LoginUseCase {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 
-        // Emitir token JWT - convertir Long a String
         String accessToken = tokenIssuer.issueAccessToken(String.valueOf(user.getId()), user.getEmail());
 
         logger.debug("JWT token issued for user: {}", user.getId());

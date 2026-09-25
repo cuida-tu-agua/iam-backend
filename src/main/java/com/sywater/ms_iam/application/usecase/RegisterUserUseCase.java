@@ -61,10 +61,9 @@ public class RegisterUserUseCase {
         );
         UserJpaEntity savedUser = userRepository.save(user);
 
-        // Crear credencial con contraseña hasheada - convertir Long a String
         String hashedPassword = passwordHasher.hash(request.password());
         UserCredentialJpaEntity credential = new UserCredentialJpaEntity(
-                String.valueOf(savedUser.getId()),
+                savedUser.getId(),
                 hashedPassword
         );
         credentialRepository.save(credential);

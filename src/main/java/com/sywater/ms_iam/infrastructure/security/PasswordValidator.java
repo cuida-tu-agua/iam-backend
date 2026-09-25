@@ -9,7 +9,7 @@ public class PasswordValidator {
 
     // Al menos 8 caracteres, 1 mayúscula, 1 minúscula, 1 dígito, 1 carácter especial
     private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"
+            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&_.])[A-Za-z\\d@$!%*?&_.]{8,}$"
     );
 
     public boolean isValid(String password) {
