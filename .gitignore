@@ -33,3 +33,8 @@ build/
 .vscode/
 
 .env
+
+keys/private.pem
+uploads/
+
+ms-iam-documentation.md
