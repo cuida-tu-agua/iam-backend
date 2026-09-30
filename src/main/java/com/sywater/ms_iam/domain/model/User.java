@@ -128,7 +128,7 @@ public final class User {
         }
         return value;
     }
-    
+
 
     public UUID id() { return id; }
     public String firstName() { return firstName; }
