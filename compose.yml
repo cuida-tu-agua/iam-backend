@@ -1,7 +1,11 @@
 services:
   redis:
     image: redis:7-alpine
+    container_name: sy_water_redis
     ports: ["6379:6379"]
-  mailpit:
+    restart: unless-stopped
+  mailpit:                   #  http://localhost:8025
     image: axllent/mailpit
+    container_name: sy_water_mailpit
     ports: ["1025:1025", "8025:8025"]
+    restart: unless-stopped
