@@ -1,0 +1,98 @@
+@host = http://localhost:3001
+@email = prueba@correo.com
+@password = Agua2026!
+@code = 000000
+@accessToken = PASTE_ACCESS_TOKEN
+@refreshToken = PASTE_REFRESH_TOKEN
+
+### HU-001 — register (201 + where the code was sent)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{ "firstName": "Ana", "lastName": "Ríos", "email": "{{email}}", "phone": "3001234567", "password": "{{password}}" }
+
+### HU-001 — weak password (400 user.weak_password + unmetRules)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{ "firstName": "Ana", "lastName": "Ríos", "email": "otra@correo.com", "password": "agua" }
+
+### HU-003 — login BEFORE verifying (403 auth.account_not_verified)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "{{email}}", "password": "{{password}}" }
+
+### HU-002 — verify with the code from Mailpit (204)
+POST {{host}}/api/auth/verify-email
+Content-Type: application/json
+
+{ "email": "{{email}}", "code": "{{code}}" }
+
+### HU-002 — send a new code (429 if you ask again within 60 s)
+POST {{host}}/api/auth/verify-email/resend
+Content-Type: application/json
+
+{ "email": "{{email}}" }
+
+### HU-003 — login (200: accessToken 1 h + refreshToken 7 days + user)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "{{email}}", "password": "{{password}}" }
+
+### HU-003 — wrong password (401 auth.wrong_password + remainingAttempts). The 5th → 423 auth.account_locked
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "{{email}}", "password": "Incorrecta1!" }
+
+### HU-003 — refresh (new pair; the old refresh token stops working)
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshToken}}" }
+
+### HU-007 — my profile
+GET {{host}}/api/users/me
+Authorization: Bearer {{accessToken}}
+
+### HU-007 — edit (the e-mail is not editable)
+PATCH {{host}}/api/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "firstName": "Ana María", "lastName": "Ríos", "phone": "+57 300 123 4567" }
+
+### HU-007 — change the password (204)
+PUT {{host}}/api/users/me/password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "currentPassword": "{{password}}", "newPassword": "Agua2027!" }
+
+### HU-005 — forgot password: e-mail OR phone
+POST {{host}}/api/auth/password/forgot
+Content-Type: application/json
+
+{ "identifier": "{{email}}" }
+
+### HU-005 — reset with the code (204; closes every session)
+POST {{host}}/api/auth/password/reset
+Content-Type: application/json
+
+{ "identifier": "{{email}}", "code": "{{code}}", "newPassword": "Agua2028!" }
+
+### HU-006 — logout (204). Then GET /api/users/me with the same token → 401
+POST {{host}}/api/auth/logout
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshToken}}" }
+
+### HU-008 — delete my account (204). Confirmation = the password
+DELETE {{host}}/api/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "password": "Agua2028!" }
