@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+/**
+ * Temporary adapter for HU-008 until ms-devices (E3) is running: it only leaves a trace.
+ * Replacing it by an HTTP (or event) adapter is a change in this package only.
+ */
 @Component
 public class NoDeviceCleanup implements DeviceCleanup {
 
