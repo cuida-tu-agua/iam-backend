@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 3001
 
 spring:
   application:
@@ -53,7 +53,7 @@ iam:
     max-bytes: 2097152
   mail:
     from: "Cuida Tu Agua <no-reply@cuidatuagua.local>"
-  cors-allowed-origins:                    
+  cors-allowed-origins:
     - http://localhost:19006
     - http://localhost:8081
 

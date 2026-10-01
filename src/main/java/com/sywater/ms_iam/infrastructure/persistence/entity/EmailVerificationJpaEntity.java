@@ -29,7 +29,7 @@ public class EmailVerificationJpaEntity {
     private Instant expiresAt;
 
     @Column(name = "verified_at")
-    private Instant usedAt;
+    private Instant verifiedAt;
 
     @Column(name = "failed_attempts", nullable = false)
     private int failedAttempts;
@@ -53,7 +53,7 @@ public class EmailVerificationJpaEntity {
     public UUID getUserId() { return userId; }
     public String getTokenHash() { return tokenHash; }
     public Instant getExpiresAt() { return expiresAt; }
-    public Instant getUsedAt() { return usedAt; }
+    public Instant getVerifiedAt() { return verifiedAt; }
     public int getFailedAttempts() { return failedAttempts; }
     public Instant getCreatedAt() { return createdAt; }
 }
