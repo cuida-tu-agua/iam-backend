@@ -6,5 +6,6 @@ public record AuthResult(
         String accessToken,
         Instant accessExpiresAt,
         String refreshToken,
+        Instant refreshExpiresAt,
         UserView user
 ) {}

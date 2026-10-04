@@ -2,30 +2,26 @@ package com.sywater.ms_iam.infrastructure.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
+import java.util.List;
+
 @ConfigurationProperties(prefix = "iam")
 public record IamProperties(
         Jwt jwt,
-        String emailVerificationTtl,
-        String passwordResetTtl,
+        Codes codes,
         Lockout lockout,
-        Google google,
-        String frontendBaseUrl
+        Avatars avatars,
+        Mail mail,
+        List<String> corsAllowedOrigins
 ) {
-    public record Jwt(
-            String issuer,
-            String keyId,
-            String accessTtl,
-            String refreshTtl,
-            String publicKey,
-            String privateKey
-    ) {}
+    public record Jwt(String issuer, String keyId, Duration accessTtl, Duration refreshTtl,
+                      String publicKey, String privateKey) {}
 
-    public record Lockout(
-            int maxAttempts,
-            String duration
-    ) {}
+    public record Codes(Duration verificationTtl, Duration resetTtl, int maxAttempts, Duration resendCooldown) {}
 
-    public record Google(
-            String clientIds
-    ) {}
+    public record Lockout(int maxAttempts, Duration duration) {}
+
+    public record Avatars(String storageDir, long maxBytes) {}
+
+    public record Mail(String from) {}
 }

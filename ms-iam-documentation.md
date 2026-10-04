@@ -1,4 +1,8 @@
 # Documentación Completa - Microservicio ms-iam
+PARA INICIAR ANTES HAY QUE SETTEAR LA CONTRASEÑA DE APP 
+
+
+$env:SECURITY_APP_PASSWORD = "SYWater2026_APP"
 
 ## 📋 Tabla de Contenidos
 1. [Arquitectura General](#arquitectura-general)
