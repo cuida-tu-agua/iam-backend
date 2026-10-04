@@ -11,4 +11,6 @@ public interface NotificationSender {
     void sendPasswordResetCode(Email to, String firstName, String code, Duration validFor);
 
     void sendPasswordChanged(Email to, String firstName);
+
+    void sendActionCode(Email to, String firstName, String action, String code, Duration validFor);
 }

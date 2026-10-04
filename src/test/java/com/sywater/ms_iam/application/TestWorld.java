@@ -3,13 +3,7 @@ package com.sywater.ms_iam.application;
 import com.sywater.ms_iam.application.dto.AuthSettings;
 import com.sywater.ms_iam.application.dto.RequestContext;
 import com.sywater.ms_iam.application.port.in.RegisterUserUseCase;
-import com.sywater.ms_iam.application.service.AccountDeletionService;
-import com.sywater.ms_iam.application.service.AuthenticationService;
-import com.sywater.ms_iam.application.service.OneTimeCodes;
-import com.sywater.ms_iam.application.service.PasswordRecoveryService;
-import com.sywater.ms_iam.application.service.ProfileService;
-import com.sywater.ms_iam.application.service.RegistrationService;
-import com.sywater.ms_iam.application.service.SessionIssuer;
+import com.sywater.ms_iam.application.service.*;
 import com.sywater.ms_iam.domain.model.LockoutPolicy;
 
 import java.time.Clock;
@@ -44,6 +38,7 @@ public final class TestWorld {
     public final Fakes.Avatars avatars = new Fakes.Avatars();
     public final Fakes.Devices devices = new Fakes.Devices();
 
+
     public final AuthSettings settings = new AuthSettings(Duration.ofHours(1), Duration.ofDays(7),
             Duration.ofHours(24), Duration.ofMinutes(15), 5, Duration.ofSeconds(60),
             new LockoutPolicy(5, Duration.ofMinutes(15)), 2 * 1024 * 1024);
@@ -61,6 +56,9 @@ public final class TestWorld {
             settings, clock);
     public final AccountDeletionService deletion = new AccountDeletionService(users, credentials, hasher,
             refreshTokens, revocations, avatars, devices, activity, clock);
+
+    public final ActionCodeService actionCodes = new ActionCodeService(users, oneTimeCodes, mailbox, activity,
+            Duration.ofMinutes(5), clock);
 
     public void advance(Duration duration) {
         now = now.plus(duration);

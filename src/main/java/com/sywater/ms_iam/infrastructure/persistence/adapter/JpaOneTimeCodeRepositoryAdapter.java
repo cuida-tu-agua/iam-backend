@@ -3,8 +3,10 @@ package com.sywater.ms_iam.infrastructure.persistence.adapter;
 import com.sywater.ms_iam.application.port.out.OneTimeCodeRepository;
 import com.sywater.ms_iam.infrastructure.persistence.entity.EmailVerificationJpaEntity;
 import com.sywater.ms_iam.infrastructure.persistence.entity.PasswordResetJpaEntity;
+import com.sywater.ms_iam.infrastructure.persistence.entity.ActionCodeJpaEntity;
 import com.sywater.ms_iam.infrastructure.persistence.jpa.SpringEmailVerificationJpaRepository;
 import com.sywater.ms_iam.infrastructure.persistence.jpa.SpringPasswordResetJpaRepository;
+import com.sywater.ms_iam.infrastructure.persistence.jpa.SpringActionCodeJpaRepository;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -15,11 +17,14 @@ public class JpaOneTimeCodeRepositoryAdapter implements OneTimeCodeRepository {
 
     private final SpringEmailVerificationJpaRepository verifications;
     private final SpringPasswordResetJpaRepository resets;
+    private final SpringActionCodeJpaRepository actions;
 
     public JpaOneTimeCodeRepositoryAdapter(SpringEmailVerificationJpaRepository verifications,
-                                           SpringPasswordResetJpaRepository resets) {
+                                           SpringPasswordResetJpaRepository resets,
+                                           SpringActionCodeJpaRepository actions) {
         this.verifications = verifications;
         this.resets = resets;
+        this.actions = actions;
     }
 
     @Override
@@ -33,6 +38,10 @@ public class JpaOneTimeCodeRepositoryAdapter implements OneTimeCodeRepository {
                 resets.expireActive(userId, now);
                 resets.save(PasswordResetJpaEntity.create(userId, codeHash, expiresAt, now));
             }
+            case VALVE_CLOSE -> {
+                actions.expireActive(userId, purpose.name(), now);
+                actions.save(ActionCodeJpaEntity.create(userId, purpose.name(), codeHash, expiresAt, now));
+            }
         }
     }
 
@@ -45,6 +54,10 @@ public class JpaOneTimeCodeRepositoryAdapter implements OneTimeCodeRepository {
             case PASSWORD_RESET -> resets
                     .findFirstByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(userId, now)
                     .map(c -> new StoredCode(c.getId(), c.getTokenHash(), c.getExpiresAt(), c.getFailedAttempts()));
+            case VALVE_CLOSE -> actions
+                    .findFirstByUserIdAndActionAndUsedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(userId, purpose.name(), now)
+                    .map(c -> new StoredCode(c.getId(), c.getTokenHash(), c.getExpiresAt(), c.getFailedAttempts()));
+
         };
     }
 
@@ -55,6 +68,8 @@ public class JpaOneTimeCodeRepositoryAdapter implements OneTimeCodeRepository {
                     .map(EmailVerificationJpaEntity::getCreatedAt);
             case PASSWORD_RESET -> resets.findFirstByUserIdOrderByCreatedAtDesc(userId)
                     .map(PasswordResetJpaEntity::getCreatedAt);
+            case VALVE_CLOSE -> actions.findFirstByUserIdAndActionOrderByCreatedAtDesc(userId, purpose.name())
+                    .map(ActionCodeJpaEntity::getCreatedAt);
         };
     }
 
@@ -69,6 +84,10 @@ public class JpaOneTimeCodeRepositoryAdapter implements OneTimeCodeRepository {
                 resets.incrementFailedAttempts(codeId);
                 yield resets.findFailedAttempts(codeId);
             }
+            case VALVE_CLOSE -> {
+                actions.incrementFailedAttempts(codeId);
+                yield actions.findFailedAttempts(codeId);
+            }
         };
     }
 
@@ -77,6 +96,7 @@ public class JpaOneTimeCodeRepositoryAdapter implements OneTimeCodeRepository {
         return switch (purpose) {
             case EMAIL_VERIFICATION -> verifications.markUsed(codeId, now) == 1;
             case PASSWORD_RESET -> resets.markUsed(codeId, now) == 1;
+            case VALVE_CLOSE -> actions.markUsed(codeId, now) == 1;
         };
     }
 }
