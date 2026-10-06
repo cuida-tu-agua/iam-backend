@@ -15,18 +15,14 @@ import com.sywater.ms_iam.application.port.out.SecretGenerator;
 import com.sywater.ms_iam.application.port.out.SecretHasher;
 import com.sywater.ms_iam.application.port.out.TokenRevocationStore;
 import com.sywater.ms_iam.application.port.out.UserRepository;
-import com.sywater.ms_iam.application.service.AccountDeletionService;
-import com.sywater.ms_iam.application.service.AuthenticationService;
-import com.sywater.ms_iam.application.service.OneTimeCodes;
-import com.sywater.ms_iam.application.service.PasswordRecoveryService;
-import com.sywater.ms_iam.application.service.ProfileService;
-import com.sywater.ms_iam.application.service.RegistrationService;
-import com.sywater.ms_iam.application.service.SessionIssuer;
+import com.sywater.ms_iam.application.service.*;
 import com.sywater.ms_iam.domain.model.LockoutPolicy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
+import java.time.Duration;
 
 @Configuration
 public class ApplicationConfig {
@@ -92,5 +88,12 @@ public class ApplicationConfig {
                                                   DeviceCleanup devices, ActivityLog activity, Clock clock) {
         return new AccountDeletionService(users, credentials, hasher, refreshTokens, revocations, avatars, devices,
                 activity, clock);
+    }
+
+    @Bean
+    ActionCodeService actionCodeService(UserRepository users, OneTimeCodes codes, NotificationSender notifications,
+                                        ActivityLog activity, @Value("${iam.codes.action-ttl:5m}") Duration validFor,
+                                        Clock clock) {
+        return new ActionCodeService(users, codes, notifications, activity, validFor, clock);
     }
 }

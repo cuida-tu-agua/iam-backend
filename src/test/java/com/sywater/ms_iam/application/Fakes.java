@@ -182,6 +182,9 @@ public final class Fakes {
         @Override public void sendPasswordChanged(Email to, String firstName) {
             sent.add(new Sent("CHANGED", to.value(), null));
         }
+        @Override public void sendActionCode(Email to, String firstName, String action, String code, Duration validFor) {
+            sent.add(new Sent("ACTION", to.value(), code)); }
+
         public String lastCode() { return sent.get(sent.size() - 1).code(); }
     }
 

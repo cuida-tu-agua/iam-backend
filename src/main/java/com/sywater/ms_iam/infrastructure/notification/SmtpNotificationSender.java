@@ -53,6 +53,16 @@ public class SmtpNotificationSender implements NotificationSender {
                 null, "Si no fuiste tú, restablécela ahora desde la app con \"¿Olvidaste tu contraseña?\".");
     }
 
+    @Override
+    public void sendActionCode(Email to, String firstName, String action, String code, Duration validFor) {
+        send(to, "Código para " + action + ": " + code,
+                "Confirma esta acción",
+                "Hola " + HtmlUtils.htmlEscape(firstName) + ", alguien pidió <b>" + HtmlUtils.htmlEscape(action)
+                        + "</b> desde tu cuenta de Cuida Tu Agua. Para confirmarlo, escribe este código en la app:",
+                code, "Vence en " + humanize(validFor) + " y solo sirve una vez. Si no fuiste tú, NO lo compartas "
+                        + "y cambia tu contraseña: alguien podría estar usando tu cuenta.");
+    }
+
     private void send(Email to, String subject, String title, String intro, String code, String footer) {
         try {
             MimeMessage message = mail.createMimeMessage();

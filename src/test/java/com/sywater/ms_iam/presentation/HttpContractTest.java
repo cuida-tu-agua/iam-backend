@@ -2,13 +2,7 @@ package com.sywater.ms_iam.presentation;
 
 import com.sywater.ms_iam.application.dto.CodeSent;
 import com.sywater.ms_iam.application.dto.UserView;
-import com.sywater.ms_iam.application.port.in.DeleteAccountUseCase;
-import com.sywater.ms_iam.application.port.in.EmailVerificationUseCase;
-import com.sywater.ms_iam.application.port.in.LoginUseCase;
-import com.sywater.ms_iam.application.port.in.PasswordRecoveryUseCase;
-import com.sywater.ms_iam.application.port.in.ProfileUseCase;
-import com.sywater.ms_iam.application.port.in.RegisterUserUseCase;
-import com.sywater.ms_iam.application.port.in.SessionUseCase;
+import com.sywater.ms_iam.application.port.in.*;
 import com.sywater.ms_iam.domain.exception.AccountLockedException;
 import com.sywater.ms_iam.domain.exception.CodeRecentlySentException;
 import com.sywater.ms_iam.domain.exception.WeakPasswordException;
@@ -19,6 +13,7 @@ import com.sywater.ms_iam.infrastructure.config.IamProperties;
 import com.sywater.ms_iam.infrastructure.config.SecurityConfig;
 import com.sywater.ms_iam.infrastructure.security.NimbusAccessTokenIssuer;
 import com.sywater.ms_iam.infrastructure.security.RedisTokenRevocationStore;
+import com.sywater.ms_iam.presentation.controller.ActionCodeController;
 import com.sywater.ms_iam.presentation.controller.AuthController;
 import com.sywater.ms_iam.presentation.controller.ProfileController;
 import com.sywater.ms_iam.presentation.error.ApiExceptionHandler;
@@ -60,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * the JWT checks (real RS256 signature with a test key pair, issuer, denylist).
  * Use cases are mocks: their logic is covered by the application tests.
  */
-@WebMvcTest(controllers = {AuthController.class, ProfileController.class})
+@WebMvcTest(controllers = {AuthController.class, ProfileController.class, ActionCodeController.class})
 @Import({SecurityConfig.class, ApiExceptionHandler.class, HttpContractTest.Keys.class})
 class HttpContractTest {
 
@@ -89,6 +84,7 @@ class HttpContractTest {
     @MockitoBean ProfileUseCase profile;
     @MockitoBean DeleteAccountUseCase deletion;
     @MockitoBean RedisTokenRevocationStore revocations;
+    @MockitoBean ActionCodeUseCase actionCodes;
 
     private static KeyPair generateKeys() {
         try {

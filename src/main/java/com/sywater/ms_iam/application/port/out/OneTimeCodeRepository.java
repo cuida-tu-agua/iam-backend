@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface OneTimeCodeRepository {
 
-    enum Purpose { EMAIL_VERIFICATION, PASSWORD_RESET }
+    enum Purpose { EMAIL_VERIFICATION, PASSWORD_RESET, VALVE_CLOSE }
 
     record StoredCode(long id, String codeHash, Instant expiresAt, int failedAttempts) {}
 
@@ -19,4 +19,5 @@ public interface OneTimeCodeRepository {
     int registerFailedAttempt(Purpose purpose, long codeId);
 
     boolean consume(Purpose purpose, long codeId, Instant now);
+
 }

@@ -38,6 +38,7 @@ iam:
     key-id: iam-key-1
     access-ttl: 1h
     refresh-ttl: 7d
+    action-ttl: 5m
     public-key: file:./keys/public.pem
     private-key: file:./keys/private.pem
   codes:
