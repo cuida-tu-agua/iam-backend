@@ -59,8 +59,20 @@ public final class TestWorld {
 
     public final UserBlockingService blocking = new UserBlockingService(users, refreshTokens, revocations, activity, clock);
 
+    public final UserListingService listing = new UserListingService(users, new AdminAccess(users));
+
     public final ActionCodeService actionCodes = new ActionCodeService(users, oneTimeCodes, mailbox, activity,
             Duration.ofMinutes(5), clock);
+
+    /** An account that already holds the ADMIN role (in production it is promoted in the database). */
+    public UUID administrator(String email) {
+        UUID id = verifiedUser(email);
+        com.sywater.ms_iam.domain.model.User user = users.byId.get(id);
+        users.byId.put(id, com.sywater.ms_iam.domain.model.User.restore(id, user.firstName(), user.lastName(), user.email(),
+                user.phone(), null, true, null, null, null, user.createdAt(), user.updatedAt(),
+                java.util.EnumSet.of(com.sywater.ms_iam.domain.model.Role.USER, com.sywater.ms_iam.domain.model.Role.ADMIN)));
+        return id;
+    }
 
     public void advance(Duration duration) {
         now = now.plus(duration);

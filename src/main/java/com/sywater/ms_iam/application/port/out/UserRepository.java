@@ -1,5 +1,7 @@
 package com.sywater.ms_iam.application.port.out;
 
+import com.sywater.ms_iam.application.dto.PageView;
+import com.sywater.ms_iam.domain.model.AccountStatus;
 import com.sywater.ms_iam.domain.model.Email;
 import com.sywater.ms_iam.domain.model.PhoneNumber;
 import com.sywater.ms_iam.domain.model.User;
@@ -22,4 +24,10 @@ public interface UserRepository {
     void create(User user);
 
     void update(User user);
+
+    /**
+     * HU-059: not deleted accounts, newest first. text = part of the name or e-mail (blank = all); status null = all.
+     * Pages start at 0.
+     */
+    PageView<User> search(String text, AccountStatus status, int page, int size);
 }

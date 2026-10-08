@@ -51,6 +51,18 @@ public final class Fakes {
         }
         @Override public void create(User user) { byId.put(user.id(), user); }
         @Override public void update(User user) { updates++; byId.put(user.id(), user); }
+        @Override public com.sywater.ms_iam.application.dto.PageView<User> search(String text, com.sywater.ms_iam.domain.model.AccountStatus status, int page, int size) {
+            String needle = text == null ? "" : text.trim().toLowerCase();
+            List<User> all = byId.values().stream()
+                    .filter(u -> !u.isDeleted())
+                    .filter(u -> status == null || u.status() == status)
+                    .filter(u -> needle.isEmpty() || u.email().value().toLowerCase().contains(needle)
+                            || u.fullName().toLowerCase().contains(needle))
+                    .sorted(java.util.Comparator.comparing(User::createdAt).reversed().thenComparing(User::id))
+                    .toList();
+            List<User> slice = all.stream().skip((long) page * size).limit(size).toList();
+            return com.sywater.ms_iam.application.dto.PageView.of(slice, page, size, all.size());
+        }
     }
 
     public static final class Credentials implements CredentialRepository {

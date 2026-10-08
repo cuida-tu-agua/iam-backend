@@ -1,8 +1,10 @@
 package com.sywater.ms_iam.infrastructure.persistence.adapter;
 
+import com.sywater.ms_iam.application.dto.PageView;
 import com.sywater.ms_iam.application.port.out.UserRepository;
 import com.sywater.ms_iam.domain.exception.EmailAlreadyRegisteredException;
 import com.sywater.ms_iam.domain.exception.PhoneAlreadyRegisteredException;
+import com.sywater.ms_iam.domain.model.AccountStatus;
 import com.sywater.ms_iam.domain.model.Email;
 import com.sywater.ms_iam.domain.model.PhoneNumber;
 import com.sywater.ms_iam.domain.model.Role;
@@ -16,8 +18,14 @@ import com.sywater.ms_iam.infrastructure.persistence.jpa.SpringUserRoleJpaReposi
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -89,6 +97,27 @@ public class JpaUserRepositoryAdapter implements UserRepository {
                 .orElseThrow(() -> new IllegalStateException("User " + user.id() + " does not exist."));
         UserMapper.copy(user, entity);
         users.save(entity);
+    }
+
+    @Override
+    public PageView<User> search(String text, AccountStatus status, int page, int size) {
+        String pattern = "%" + likeEscape(text == null ? "" : text.trim().toLowerCase(Locale.ROOT)) + "%";
+        Page<UserJpaEntity> found = users.search(status == null ? "ALL" : status.name(), pattern, PageRequest.of(page, size));
+
+        Map<UUID, List<String>> rolesByUser = new HashMap<>();
+        if (!found.isEmpty()) {
+            for (Object[] row : users.findRoleCodesOf(found.getContent().stream().map(UserJpaEntity::getId).toList())) {
+                rolesByUser.computeIfAbsent((UUID) row[0], k -> new java.util.ArrayList<>()).add((String) row[1]);
+            }
+        }
+        List<User> items = found.getContent().stream()
+                .map(e -> UserMapper.toDomain(e, rolesByUser.getOrDefault(e.getId(), List.of()))).toList();
+        return PageView.of(items, page, size, found.getTotalElements());
+    }
+
+    /** The user types plain text: a "%" or "_" of theirs must not act as a wildcard. '!' is the escape of the query. */
+    static String likeEscape(String value) {
+        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_").replace("[", "![");
     }
 
     private User toDomain(UserJpaEntity entity) {

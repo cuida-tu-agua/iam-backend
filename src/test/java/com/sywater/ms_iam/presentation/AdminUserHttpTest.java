@@ -1,7 +1,10 @@
 package com.sywater.ms_iam.presentation;
 
 import com.sywater.ms_iam.application.dto.AdminUserView;
+import com.sywater.ms_iam.application.dto.PageView;
 import com.sywater.ms_iam.application.port.in.BlockUserUseCase;
+import com.sywater.ms_iam.application.port.in.ListUsersUseCase;
+import com.sywater.ms_iam.domain.exception.InvalidFilterException;
 import com.sywater.ms_iam.domain.exception.CannotBlockSelfException;
 import com.sywater.ms_iam.domain.exception.NotAdministratorException;
 import com.sywater.ms_iam.domain.model.AccountStatus;
@@ -40,6 +43,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -70,6 +74,7 @@ class AdminUserHttpTest {
     @Autowired MockMvc mvc;
 
     @MockitoBean BlockUserUseCase blocking;
+    @MockitoBean ListUsersUseCase listing;
     @MockitoBean RedisTokenRevocationStore revocations;
 
     private static KeyPair generateKeys() {
@@ -91,6 +96,62 @@ class AdminUserHttpTest {
     private static AdminUserView view(UUID id, AccountStatus status, UUID blockedBy) {
         return new AdminUserView(id, "Juan", "Ome", "juan@mail.com", null, status, Instant.parse("2026-09-01T10:00:00Z"),
                 blockedBy == null ? null : Instant.parse("2026-10-08T10:00:00Z"), blockedBy);
+    }
+
+    // ── HU-059 ───────────────────────────────────────────────────────────
+
+    @Test
+    void the_list_passes_search_status_and_page_and_answers_with_the_totals() throws Exception {
+        UUID admin = UUID.randomUUID();
+        UUID user = UUID.randomUUID();
+        given(listing.list(eq(admin), eq("ana"), eq(AccountStatus.BLOCKED), eq(1), eq(10)))
+                .willReturn(PageView.of(List.of(view(user, AccountStatus.BLOCKED, admin)), 1, 10, 11));
+
+        mvc.perform(get("/api/admin/users").queryParam("search", "ana").queryParam("status", "BLOCKED")
+                        .queryParam("page", "1").queryParam("size", "10").header("Authorization", bearer(admin, Role.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(user.toString()))
+                .andExpect(jsonPath("$.items[0].status").value("BLOCKED"))
+                .andExpect(jsonPath("$.items[0].password").doesNotExist())
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.totalItems").value(11))
+                .andExpect(jsonPath("$.totalPages").value(2));
+    }
+
+    @Test
+    void the_list_defaults_to_the_first_page_of_20_with_no_filters() throws Exception {
+        UUID admin = UUID.randomUUID();
+        given(listing.list(eq(admin), isNull(), isNull(), eq(0), eq(20))).willReturn(PageView.of(List.of(), 0, 20, 0));
+
+        mvc.perform(get("/api/admin/users").header("Authorization", bearer(admin, Role.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty())
+                .andExpect(jsonPath("$.totalPages").value(0));
+    }
+
+    @Test
+    void the_list_is_for_administrators_only() throws Exception {
+        mvc.perform(get("/api/admin/users").header("Authorization", bearer(UUID.randomUUID(), Role.USER)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("auth.admin_required"));
+        mvc.perform(get("/api/admin/users")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(listing);
+    }
+
+    @Test
+    void an_unknown_status_or_a_rejected_filter_is_400_not_500() throws Exception {
+        UUID admin = UUID.randomUUID();
+        given(listing.list(eq(admin), any(), eq(AccountStatus.DELETED), any(Integer.class), any(Integer.class)))
+                .willThrow(new InvalidFilterException("Deleted accounts are not listed."));
+
+        mvc.perform(get("/api/admin/users").queryParam("status", "NOPE").header("Authorization", bearer(admin, Role.ADMIN)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("validation.failed"));
+        mvc.perform(get("/api/admin/users").queryParam("status", "DELETED").header("Authorization", bearer(admin, Role.ADMIN)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("validation.invalid_filter"));
+        mvc.perform(get("/api/admin/users").queryParam("page", "abc").header("Authorization", bearer(admin, Role.ADMIN)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

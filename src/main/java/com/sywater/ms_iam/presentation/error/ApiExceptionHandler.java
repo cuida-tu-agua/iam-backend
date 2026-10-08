@@ -68,6 +68,12 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ProblemDetail> badParameter(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.badRequest().body(problem(HttpStatus.BAD_REQUEST, "validation.failed",
+                "The parameter '" + e.getName() + "' has an invalid value."));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ProblemDetail> unreadable(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(problem(HttpStatus.BAD_REQUEST, "validation.malformed_body",

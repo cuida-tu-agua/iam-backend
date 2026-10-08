@@ -96,3 +96,25 @@ Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 { "password": "Agua2028!" }
+
+### E14 · Admin panel. Needs a token whose "roles" include ADMIN: log in as an administrator and use its accessToken.
+### (The first ADMIN is promoted in the database: INSERT INTO security.user_roles for the ADMIN row of security.roles.)
+
+### HU-059 — list users (ADMIN). search = part of name or e-mail; status = ACTIVE | BLOCKED | UNVERIFIED; page starts at 0, size max 100
+GET {{host}}/api/admin/users?search=ana&status=ACTIVE&page=0&size=20
+Authorization: Bearer {{adminToken}}
+
+### HU-060 — block a user (ADMIN). Kills all their sessions at once; the reason is optional and goes to the audit log
+PUT {{host}}/api/admin/users/{{userId}}/block
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "reason": "Uso indebido" }
+
+### HU-060 — unblock a user (ADMIN)
+PUT {{host}}/api/admin/users/{{userId}}/unblock
+Authorization: Bearer {{adminToken}}
+
+### Service-to-service (ms-notification): where to write to a user. X-Internal-Key = INTERNAL_API_KEY of this service
+GET {{host}}/internal/users/{{userId}}/contact
+X-Internal-Key: {{internalKey}}

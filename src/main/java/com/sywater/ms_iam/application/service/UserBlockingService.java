@@ -7,9 +7,7 @@ import com.sywater.ms_iam.application.port.out.ActivityLog;
 import com.sywater.ms_iam.application.port.out.RefreshTokenRepository;
 import com.sywater.ms_iam.application.port.out.TokenRevocationStore;
 import com.sywater.ms_iam.application.port.out.UserRepository;
-import com.sywater.ms_iam.domain.exception.NotAdministratorException;
 import com.sywater.ms_iam.domain.exception.UserNotFoundException;
-import com.sywater.ms_iam.domain.model.Role;
 import com.sywater.ms_iam.domain.model.User;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +22,7 @@ public class UserBlockingService implements BlockUserUseCase {
     static final int REASON_MAX = 200;
 
     private final UserRepository users;
+    private final AdminAccess admins;
     private final RefreshTokenRepository refreshTokens;
     private final TokenRevocationStore revocations;
     private final ActivityLog activity;
@@ -32,6 +31,7 @@ public class UserBlockingService implements BlockUserUseCase {
     public UserBlockingService(UserRepository users, RefreshTokenRepository refreshTokens,
                                TokenRevocationStore revocations, ActivityLog activity, Clock clock) {
         this.users = users;
+        this.admins = new AdminAccess(users);
         this.refreshTokens = refreshTokens;
         this.revocations = revocations;
         this.activity = activity;
@@ -42,7 +42,7 @@ public class UserBlockingService implements BlockUserUseCase {
     @Transactional
     public AdminUserView block(UUID administratorId, UUID userId, String reason, RequestContext context) {
         Instant now = clock.instant();
-        requireAdministrator(administratorId);
+        admins.require(administratorId);
         User user = users.findById(userId).filter(u -> !u.isDeleted()).orElseThrow(UserNotFoundException::new);
 
         if (user.block(administratorId, now)) {
@@ -59,7 +59,7 @@ public class UserBlockingService implements BlockUserUseCase {
     @Transactional
     public AdminUserView unblock(UUID administratorId, UUID userId, String reason, RequestContext context) {
         Instant now = clock.instant();
-        requireAdministrator(administratorId);
+        admins.require(administratorId);
         User user = users.findById(userId).filter(u -> !u.isDeleted()).orElseThrow(UserNotFoundException::new);
 
         if (user.unblock(now)) {
@@ -67,13 +67,6 @@ public class UserBlockingService implements BlockUserUseCase {
             audit("USER_UNBLOCKED", "ACCOUNT_UNBLOCKED", administratorId, userId, reason, context, now);
         }
         return AdminUserView.of(user);
-    }
-
-    /** The token says ADMIN, but the database has the last word: a demoted or blocked admin loses the power at once. */
-    private void requireAdministrator(UUID administratorId) {
-        User admin = users.findById(administratorId).filter(u -> !u.isDeleted() && !u.isBlocked())
-                .orElseThrow(NotAdministratorException::new);
-        if (!admin.hasRole(Role.ADMIN)) throw new NotAdministratorException();
     }
 
     /** Two rows: the action of the administrator (who did it) and the history of the user (what happened to them). */

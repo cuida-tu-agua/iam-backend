@@ -91,6 +91,11 @@ public class ApplicationConfig {
     }
 
     @Bean
+    UserListingService userListingService(UserRepository users) {
+        return new UserListingService(users, new AdminAccess(users));
+    }
+
+    @Bean
     UserBlockingService userBlockingService(UserRepository users, RefreshTokenRepository refreshTokens,
                                             TokenRevocationStore revocations, ActivityLog activity, Clock clock) {
         return new UserBlockingService(users, refreshTokens, revocations, activity, clock);
