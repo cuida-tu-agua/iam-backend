@@ -149,9 +149,12 @@ public final class Fakes {
     }
 
     public static final class Activity implements ActivityLog {
+        public record Entry(UUID userId, String action, Map<String, String> metadata) {}
         public final List<String> actions = new ArrayList<>();
+        public final List<Entry> entries = new ArrayList<>();
         @Override public void record(UUID userId, String action, Map<String, String> metadata, String ip, Instant at) {
             actions.add(action);
+            entries.add(new Entry(userId, action, metadata));
         }
     }
 

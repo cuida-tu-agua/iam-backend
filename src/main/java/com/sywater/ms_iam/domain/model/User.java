@@ -3,6 +3,8 @@ package com.sywater.ms_iam.domain.model;
 import com.sywater.ms_iam.domain.exception.AccountBlockedException;
 import com.sywater.ms_iam.domain.exception.AccountLockedException;
 import com.sywater.ms_iam.domain.exception.AccountNotVerifiedException;
+import com.sywater.ms_iam.domain.exception.CannotBlockSelfException;
+import com.sywater.ms_iam.domain.exception.UserNotFoundException;
 import com.sywater.ms_iam.domain.exception.AlreadyVerifiedException;
 import com.sywater.ms_iam.domain.exception.EmailNotFoundException;
 import com.sywater.ms_iam.domain.exception.InvalidUserDataException;
@@ -31,14 +33,15 @@ public final class User {
     private String avatarUrl;
     private boolean emailVerified;
     private Instant accountLockedUntil;
-    private final Instant blockedAt;
+    private Instant blockedAt;
+    private UUID blockedBy;
     private Instant deletedAt;
     private final Instant createdAt;
     private Instant updatedAt;
     private final Set<Role> roles;
 
     private User(UUID id, String firstName, String lastName, Email email, PhoneNumber phone, String avatarUrl,
-                 boolean emailVerified, Instant accountLockedUntil, Instant blockedAt, Instant deletedAt,
+                 boolean emailVerified, Instant accountLockedUntil, Instant blockedAt, UUID blockedBy, Instant deletedAt,
                  Instant createdAt, Instant updatedAt, Set<Role> roles) {
         this.id = id;
         this.firstName = firstName;
@@ -49,6 +52,7 @@ public final class User {
         this.emailVerified = emailVerified;
         this.accountLockedUntil = accountLockedUntil;
         this.blockedAt = blockedAt;
+        this.blockedBy = blockedBy;
         this.deletedAt = deletedAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -58,15 +62,23 @@ public final class User {
     /**  a new account starts unverified and with the USER role. */
     public static User register(String firstName, String lastName, Email email, PhoneNumber phone, Instant now) {
         return new User(UUID.randomUUID(), cleanName(firstName, "first name"), cleanName(lastName, "last name"),
-                email, phone, null, false, null, null, null, now, now, EnumSet.of(Role.USER));
+                email, phone, null, false, null, null, null, null, now, now, EnumSet.of(Role.USER));
     }
 
     public static User restore(UUID id, String firstName, String lastName, Email email, PhoneNumber phone,
                                String avatarUrl, boolean emailVerified, Instant accountLockedUntil,
                                Instant blockedAt, Instant deletedAt, Instant createdAt, Instant updatedAt,
                                Set<Role> roles) {
+        return restore(id, firstName, lastName, email, phone, avatarUrl, emailVerified, accountLockedUntil,
+                blockedAt, null, deletedAt, createdAt, updatedAt, roles);
+    }
+
+    public static User restore(UUID id, String firstName, String lastName, Email email, PhoneNumber phone,
+                               String avatarUrl, boolean emailVerified, Instant accountLockedUntil,
+                               Instant blockedAt, UUID blockedBy, Instant deletedAt, Instant createdAt,
+                               Instant updatedAt, Set<Role> roles) {
         return new User(id, firstName, lastName, email, phone, avatarUrl, emailVerified, accountLockedUntil,
-                blockedAt, deletedAt, createdAt, updatedAt, roles);
+                blockedAt, blockedBy, deletedAt, createdAt, updatedAt, roles);
     }
 
 
@@ -108,6 +120,43 @@ public final class User {
         this.updatedAt = now;
     }
 
+    /**
+     * HU-060: an administrator blocks the account. Idempotent: blocking a blocked account keeps who and when of the
+     * FIRST block. A deleted account cannot be blocked; nobody blocks their own account.
+     *
+     * @return true if the state changed
+     */
+    public boolean block(UUID administratorId, Instant now) {
+        if (isDeleted()) throw new UserNotFoundException();
+        if (administratorId.equals(id)) throw new CannotBlockSelfException();
+        if (blockedAt != null) return false;
+        this.blockedAt = now;
+        this.blockedBy = administratorId;
+        this.updatedAt = now;
+        return true;
+    }
+
+    /** @return true if the state changed */
+    public boolean unblock(Instant now) {
+        if (isDeleted()) throw new UserNotFoundException();
+        if (blockedAt == null) return false;
+        this.blockedAt = null;
+        this.blockedBy = null;
+        this.updatedAt = now;
+        return true;
+    }
+
+    public boolean isBlocked() { return blockedAt != null; }
+
+    public boolean hasRole(Role role) { return roles.contains(role); }
+
+    /** What the administrator sees: deleted > blocked > unverified > active. */
+    public AccountStatus status() {
+        if (isDeleted()) return AccountStatus.DELETED;
+        if (blockedAt != null) return AccountStatus.BLOCKED;
+        return emailVerified ? AccountStatus.ACTIVE : AccountStatus.UNVERIFIED;
+    }
+
     public void delete(Instant now) {
         this.deletedAt = now;
         this.firstName = "Usuario";
@@ -140,6 +189,7 @@ public final class User {
     public boolean isEmailVerified() { return emailVerified; }
     public Instant accountLockedUntil() { return accountLockedUntil; }
     public Instant blockedAt() { return blockedAt; }
+    public UUID blockedBy() { return blockedBy; }
     public Instant deletedAt() { return deletedAt; }
     public boolean isDeleted() { return deletedAt != null; }
     public Instant createdAt() { return createdAt; }

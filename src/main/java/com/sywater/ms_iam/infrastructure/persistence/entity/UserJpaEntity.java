@@ -81,6 +81,8 @@ public class UserJpaEntity {
     public Instant getAccountLockedUntil() { return accountLockedUntil; }
     public void setAccountLockedUntil(Instant accountLockedUntil) { this.accountLockedUntil = accountLockedUntil; }
     public Instant getBlockedAt() { return blockedAt; }
+    public void setBlockedAt(Instant blockedAt) { this.blockedAt = blockedAt; }
+    public void setBlockedBy(UUID blockedBy) { this.blockedBy = blockedBy; }
     public UUID getBlockedBy() { return blockedBy; }
     public Instant getDeletedAt() { return deletedAt; }
     public void setDeletedAt(Instant deletedAt) { this.deletedAt = deletedAt; }

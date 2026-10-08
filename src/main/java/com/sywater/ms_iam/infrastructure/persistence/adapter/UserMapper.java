@@ -25,7 +25,7 @@ final class UserMapper {
         }
         return User.restore(e.getId(), e.getFirstName(), e.getLastName(), new Email(e.getEmail()),
                 PhoneNumber.ofNullable(e.getPhone()), e.getAvatarUrl(), e.isEmailVerified(),
-                e.getAccountLockedUntil(), e.getBlockedAt(), e.getDeletedAt(), e.getCreatedAt(), e.getUpdatedAt(), roles);
+                e.getAccountLockedUntil(), e.getBlockedAt(), e.getBlockedBy(), e.getDeletedAt(), e.getCreatedAt(), e.getUpdatedAt(), roles);
     }
 
     static void copy(User user, UserJpaEntity e) {
@@ -36,6 +36,8 @@ final class UserMapper {
         e.setAvatarUrl(user.avatarUrl());
         e.setEmailVerified(user.isEmailVerified());
         e.setAccountLockedUntil(user.accountLockedUntil());
+        e.setBlockedAt(user.blockedAt());
+        e.setBlockedBy(user.blockedBy());
         e.setDeletedAt(user.deletedAt());
         e.setUpdatedAt(user.updatedAt());
         if (e.getCreatedAt() == null) e.setCreatedAt(user.createdAt());

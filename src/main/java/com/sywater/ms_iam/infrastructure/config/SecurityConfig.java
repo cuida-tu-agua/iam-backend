@@ -9,12 +9,18 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -45,6 +51,14 @@ public class SecurityConfig {
                     + "\"detail\":\"The access token is missing, expired or revoked.\"}");
         };
 
+        AccessDeniedHandler forbidden = (request, response, ex) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/problem+json");
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.getWriter().write("{\"type\":\"about:blank\",\"title\":\"auth.admin_required\",\"status\":403,"
+                    + "\"detail\":\"Only an administrator can do this.\"}");
+        };
+
         http
                 // Stateless API with bearer tokens: there is no cookie to protect with CSRF tokens
                 .csrf(csrf -> csrf.disable())
@@ -56,15 +70,28 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
                         // service-to-service: protected by X-Internal-Key inside the controller (InternalKeyGuard)
                         .requestMatchers("/internal/**").permitAll()
+                        // E14 admin panel: only the ADMIN role (the use cases check it again in the database)
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o
-                        .jwt(jwt -> jwt.decoder(jwtDecoder))
+                        .jwt(jwt -> jwt.decoder(jwtDecoder).jwtAuthenticationConverter(rolesFromToken()))
                         .authenticationEntryPoint(unauthorized))
-                .exceptionHandling(e -> e.authenticationEntryPoint(unauthorized));
+                .exceptionHandling(e -> e.authenticationEntryPoint(unauthorized).accessDeniedHandler(forbidden));
 
         return http.build();
     }
 
+
+    /** The "roles" claim of our own tokens (["ADMIN","USER"]) becomes ROLE_ADMIN, ROLE_USER. */
+    static Converter<Jwt, ? extends AbstractAuthenticationToken> rolesFromToken() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            List<String> roles = jwt.getClaimAsStringList("roles");
+            return roles == null ? List.of()
+                    : roles.stream().map(r -> new SimpleGrantedAuthority("ROLE_" + r)).map(a -> (org.springframework.security.core.GrantedAuthority) a).toList();
+        });
+        return converter;
+    }
     @Bean
     JwtDecoder jwtDecoder(RSAPublicKey publicKey, IamProperties properties, RedisTokenRevocationStore revocations) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(publicKey)

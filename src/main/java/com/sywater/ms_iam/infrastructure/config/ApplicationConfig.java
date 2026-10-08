@@ -91,6 +91,12 @@ public class ApplicationConfig {
     }
 
     @Bean
+    UserBlockingService userBlockingService(UserRepository users, RefreshTokenRepository refreshTokens,
+                                            TokenRevocationStore revocations, ActivityLog activity, Clock clock) {
+        return new UserBlockingService(users, refreshTokens, revocations, activity, clock);
+    }
+
+    @Bean
     ContactLookupService contactLookupService(UserRepository users) {
         return new ContactLookupService(users);
     }

@@ -57,6 +57,8 @@ public final class TestWorld {
     public final AccountDeletionService deletion = new AccountDeletionService(users, credentials, hasher,
             refreshTokens, revocations, avatars, devices, activity, clock);
 
+    public final UserBlockingService blocking = new UserBlockingService(users, refreshTokens, revocations, activity, clock);
+
     public final ActionCodeService actionCodes = new ActionCodeService(users, oneTimeCodes, mailbox, activity,
             Duration.ofMinutes(5), clock);
 
