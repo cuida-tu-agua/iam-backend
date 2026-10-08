@@ -216,6 +216,10 @@ public final class Fakes {
 
     public static final class Devices implements DeviceCleanup {
         public final List<UUID> cleaned = new ArrayList<>();
-        @Override public void unlinkAllDevicesOf(UUID userId) { cleaned.add(userId); }
+        public boolean down;
+        @Override public void unlinkAllDevicesOf(UUID userId) {
+            if (down) throw new com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException("device");
+            cleaned.add(userId);
+        }
     }
 }

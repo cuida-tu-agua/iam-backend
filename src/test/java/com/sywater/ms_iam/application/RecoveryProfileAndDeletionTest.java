@@ -188,4 +188,18 @@ class RecoveryProfileAndDeletionTest {
         // The e-mail is free again
         w.registration.register(new RegisterUserUseCase.Command("Juan", "Ome", "juan@mail.com", null, TestWorld.PASSWORD));
     }
+
+    @Test
+    void if_the_devices_cannot_be_unlinked_the_account_is_not_deleted() {
+        UUID id = w.verifiedUser("juan@mail.com");
+        w.auth.login("juan@mail.com", TestWorld.PASSWORD, TestWorld.CTX);
+        w.devices.down = true;
+
+        assertThatThrownBy(() -> w.deletion.deleteAccount(id, TestWorld.PASSWORD, TestWorld.CTX))
+                .isInstanceOf(com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException.class);
+
+        assertThat(w.profile.getProfile(id)).isNotNull();          // still there: the user can retry
+        assertThat(w.refreshTokens.active(id)).isEqualTo(1);       // session untouched
+        assertThat(w.revocations.revokedBefore).doesNotContainKey(id);
+    }
 }

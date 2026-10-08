@@ -109,6 +109,7 @@ public class ApiExceptionHandler {
                 || e instanceof AlreadyVerifiedException) return HttpStatus.CONFLICT;
         if (e instanceof AccountLockedException) return HttpStatus.LOCKED;                  // 423
         if (e instanceof CodeRecentlySentException) return HttpStatus.TOO_MANY_REQUESTS;    // 429
+        if (e instanceof com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException) return HttpStatus.SERVICE_UNAVAILABLE;
         return HttpStatus.BAD_REQUEST;   // invalid data, weak password, wrong/expired code, avatar...
     }
 
