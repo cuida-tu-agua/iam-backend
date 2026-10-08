@@ -51,6 +51,11 @@ public final class Fakes {
         }
         @Override public void create(User user) { byId.put(user.id(), user); }
         @Override public void update(User user) { updates++; byId.put(user.id(), user); }
+        @Override public com.sywater.ms_iam.application.dto.UserCounts countByStatus() {
+            long[] n = new long[3];
+            byId.values().stream().filter(u -> !u.isDeleted()).forEach(u -> n[u.status().ordinal()]++);
+            return new com.sywater.ms_iam.application.dto.UserCounts(n[0], n[1], n[2]);   // ACTIVE, BLOCKED, UNVERIFIED
+        }
         @Override public com.sywater.ms_iam.application.dto.PageView<User> search(String text, com.sywater.ms_iam.domain.model.AccountStatus status, int page, int size) {
             String needle = text == null ? "" : text.trim().toLowerCase();
             List<User> all = byId.values().stream()
@@ -62,6 +67,21 @@ public final class Fakes {
                     .toList();
             List<User> slice = all.stream().skip((long) page * size).limit(size).toList();
             return com.sywater.ms_iam.application.dto.PageView.of(slice, page, size, all.size());
+        }
+    }
+
+    public static final class Metrics implements com.sywater.ms_iam.application.port.out.ServiceMetricsReader {
+        public com.sywater.ms_iam.application.dto.ServiceTotals.Places places = new com.sywater.ms_iam.application.dto.ServiceTotals.Places(0);
+        public com.sywater.ms_iam.application.dto.ServiceTotals.Devices devices = new com.sywater.ms_iam.application.dto.ServiceTotals.Devices(0, 0, 0);
+        public boolean placesDown;
+        public boolean devicesDown;
+        @Override public com.sywater.ms_iam.application.dto.ServiceTotals.Places places() {
+            if (placesDown) throw new com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException("places");
+            return places;
+        }
+        @Override public com.sywater.ms_iam.application.dto.ServiceTotals.Devices devices() {
+            if (devicesDown) throw new com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException("device");
+            return devices;
         }
     }
 

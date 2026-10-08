@@ -37,6 +37,7 @@ public final class TestWorld {
     public final Fakes.Mailbox mailbox = new Fakes.Mailbox();
     public final Fakes.Avatars avatars = new Fakes.Avatars();
     public final Fakes.Devices devices = new Fakes.Devices();
+    public final Fakes.Metrics metricsSource = new Fakes.Metrics();
 
 
     public final AuthSettings settings = new AuthSettings(Duration.ofHours(1), Duration.ofDays(7),
@@ -60,6 +61,8 @@ public final class TestWorld {
     public final UserBlockingService blocking = new UserBlockingService(users, refreshTokens, revocations, activity, clock);
 
     public final UserListingService listing = new UserListingService(users, new AdminAccess(users));
+
+    public final PlatformMetricsService metrics = new PlatformMetricsService(users, new AdminAccess(users), metricsSource, clock);
 
     public final ActionCodeService actionCodes = new ActionCodeService(users, oneTimeCodes, mailbox, activity,
             Duration.ofMinutes(5), clock);

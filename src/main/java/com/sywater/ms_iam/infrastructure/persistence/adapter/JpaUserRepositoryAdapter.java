@@ -1,6 +1,7 @@
 package com.sywater.ms_iam.infrastructure.persistence.adapter;
 
 import com.sywater.ms_iam.application.dto.PageView;
+import com.sywater.ms_iam.application.dto.UserCounts;
 import com.sywater.ms_iam.application.port.out.UserRepository;
 import com.sywater.ms_iam.domain.exception.EmailAlreadyRegisteredException;
 import com.sywater.ms_iam.domain.exception.PhoneAlreadyRegisteredException;
@@ -97,6 +98,11 @@ public class JpaUserRepositoryAdapter implements UserRepository {
                 .orElseThrow(() -> new IllegalStateException("User " + user.id() + " does not exist."));
         UserMapper.copy(user, entity);
         users.save(entity);
+    }
+
+    @Override
+    public UserCounts countByStatus() {
+        return new UserCounts(users.countActive(), users.countBlocked(), users.countUnverified());
     }
 
     @Override

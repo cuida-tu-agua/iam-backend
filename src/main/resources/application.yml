@@ -36,7 +36,8 @@ iam:
   internal:
     api-key: ${INTERNAL_API_KEY:}          # service-to-service key; the SAME value as "Internal:ApiKey" in the .NET services (empty = /internal/** refused)
   integration:
-    devices-url: ${DEVICES_URL:http://localhost:3003}   # ms-device: HU-008 unlinks the devices of a deleted account (empty = only a log line)
+    devices-url: ${DEVICES_URL:http://localhost:3003}   # ms-device: HU-008 unlinks the devices of a deleted account (empty = only a log line); HU-062 metrics
+    places-url: ${PLACES_URL:http://localhost:3002}     # ms-places: HU-062 metrics (empty = the places section is reported as unavailable)
   jwt:
     issuer: https://iam.cuidatuagua.local
     key-id: iam-key-1

@@ -12,6 +12,7 @@ import com.sywater.ms_iam.application.port.out.OneTimeCodeRepository;
 import com.sywater.ms_iam.application.port.out.PasswordHasher;
 import com.sywater.ms_iam.application.port.out.RefreshTokenRepository;
 import com.sywater.ms_iam.application.port.out.SecretGenerator;
+import com.sywater.ms_iam.application.port.out.ServiceMetricsReader;
 import com.sywater.ms_iam.application.port.out.SecretHasher;
 import com.sywater.ms_iam.application.port.out.TokenRevocationStore;
 import com.sywater.ms_iam.application.port.out.UserRepository;
@@ -93,6 +94,11 @@ public class ApplicationConfig {
     @Bean
     UserListingService userListingService(UserRepository users) {
         return new UserListingService(users, new AdminAccess(users));
+    }
+
+    @Bean
+    PlatformMetricsService platformMetricsService(UserRepository users, ServiceMetricsReader services, Clock clock) {
+        return new PlatformMetricsService(users, new AdminAccess(users), services, clock);
     }
 
     @Bean

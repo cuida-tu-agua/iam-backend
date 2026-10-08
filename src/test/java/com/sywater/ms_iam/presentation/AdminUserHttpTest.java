@@ -15,6 +15,9 @@ import com.sywater.ms_iam.infrastructure.config.IamProperties;
 import com.sywater.ms_iam.infrastructure.config.SecurityConfig;
 import com.sywater.ms_iam.infrastructure.security.NimbusAccessTokenIssuer;
 import com.sywater.ms_iam.infrastructure.security.RedisTokenRevocationStore;
+import com.sywater.ms_iam.application.dto.PlatformMetricsView;
+import com.sywater.ms_iam.application.port.in.PlatformMetricsUseCase;
+import com.sywater.ms_iam.presentation.controller.AdminMetricsController;
 import com.sywater.ms_iam.presentation.controller.AdminUserController;
 import com.sywater.ms_iam.presentation.error.ApiExceptionHandler;
 import org.junit.jupiter.api.Test;
@@ -52,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * HTTP contract of /api/admin: only the ADMIN role of a real RS256 token gets in, and the error codes are stable.
  * The use case is a mock; its rules are covered by UserBlockingTest.
  */
-@WebMvcTest(controllers = AdminUserController.class)
+@WebMvcTest(controllers = {AdminUserController.class, AdminMetricsController.class})
 @Import({SecurityConfig.class, ApiExceptionHandler.class, AdminUserHttpTest.Keys.class})
 class AdminUserHttpTest {
 
@@ -75,6 +78,7 @@ class AdminUserHttpTest {
 
     @MockitoBean BlockUserUseCase blocking;
     @MockitoBean ListUsersUseCase listing;
+    @MockitoBean PlatformMetricsUseCase metrics;
     @MockitoBean RedisTokenRevocationStore revocations;
 
     private static KeyPair generateKeys() {
@@ -96,6 +100,34 @@ class AdminUserHttpTest {
     private static AdminUserView view(UUID id, AccountStatus status, UUID blockedBy) {
         return new AdminUserView(id, "Juan", "Ome", "juan@mail.com", null, status, Instant.parse("2026-09-01T10:00:00Z"),
                 blockedBy == null ? null : Instant.parse("2026-10-08T10:00:00Z"), blockedBy);
+    }
+
+    // ── HU-062 ───────────────────────────────────────────────────────────
+
+    @Test
+    void the_metrics_answer_with_each_section_and_null_for_a_service_that_is_down() throws Exception {
+        UUID admin = UUID.randomUUID();
+        given(metrics.get(admin)).willReturn(new PlatformMetricsView(Instant.parse("2026-10-08T10:00:00Z"),
+                new PlatformMetricsView.Users(10, 7, 3, 2, 1), null,
+                new PlatformMetricsView.Devices(4, 3, 1, 2), List.of("places")));
+
+        mvc.perform(get("/api/admin/metrics").header("Authorization", bearer(admin, Role.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users.total").value(10))
+                .andExpect(jsonPath("$.users.active").value(7))
+                .andExpect(jsonPath("$.users.inactive").value(3))
+                .andExpect(jsonPath("$.devices.active").value(3))
+                .andExpect(jsonPath("$.places").doesNotExist())
+                .andExpect(jsonPath("$.unavailable[0]").value("places"));
+    }
+
+    @Test
+    void the_metrics_are_for_administrators_only() throws Exception {
+        mvc.perform(get("/api/admin/metrics").header("Authorization", bearer(UUID.randomUUID(), Role.USER)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("auth.admin_required"));
+        mvc.perform(get("/api/admin/metrics")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(metrics);
     }
 
     // ── HU-059 ───────────────────────────────────────────────────────────

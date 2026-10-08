@@ -1,6 +1,7 @@
 package com.sywater.ms_iam.application.port.out;
 
 import com.sywater.ms_iam.application.dto.PageView;
+import com.sywater.ms_iam.application.dto.UserCounts;
 import com.sywater.ms_iam.domain.model.AccountStatus;
 import com.sywater.ms_iam.domain.model.Email;
 import com.sywater.ms_iam.domain.model.PhoneNumber;
@@ -30,4 +31,7 @@ public interface UserRepository {
      * Pages start at 0.
      */
     PageView<User> search(String text, AccountStatus status, int page, int size);
+
+    /** HU-062: not deleted accounts split into active (verified, not blocked), blocked and unverified. */
+    UserCounts countByStatus();
 }

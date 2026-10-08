@@ -30,6 +30,16 @@ public interface SpringUserJpaRepository extends JpaRepository<UserJpaEntity, UU
     @Query("select ur.userId, r.code from UserRoleJpaEntity ur, RoleJpaEntity r where ur.roleId = r.id and ur.userId in :ids")
     List<Object[]> findRoleCodesOf(@Param("ids") Collection<UUID> ids);
 
+    /** HU-062: same definition of each status as {@link #search}. */
+    @Query("select count(u) from UserJpaEntity u where u.deletedAt is null and u.blockedAt is null and u.emailVerified = true")
+    long countActive();
+
+    @Query("select count(u) from UserJpaEntity u where u.deletedAt is null and u.blockedAt is not null")
+    long countBlocked();
+
+    @Query("select count(u) from UserJpaEntity u where u.deletedAt is null and u.blockedAt is null and u.emailVerified = false")
+    long countUnverified();
+
     /**
      * HU-059. status: ALL | ACTIVE | BLOCKED | UNVERIFIED. pattern: already lower-case, with % around and the
      * wildcards of the user escaped with '!'. A deleted account never matches.
