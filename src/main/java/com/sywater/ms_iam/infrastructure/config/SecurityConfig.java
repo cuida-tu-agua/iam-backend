@@ -54,6 +54,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, PUBLIC_POSTS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
+                        // service-to-service: protected by X-Internal-Key inside the controller (InternalKeyGuard)
+                        .requestMatchers("/internal/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o
                         .jwt(jwt -> jwt.decoder(jwtDecoder))

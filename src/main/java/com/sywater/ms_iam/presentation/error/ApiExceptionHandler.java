@@ -95,7 +95,8 @@ public class ApiExceptionHandler {
     static HttpStatus statusOf(DomainException e) {
         if (e instanceof EmailNotFoundException || e instanceof WrongPasswordException
                 || e instanceof InvalidRefreshTokenException) return HttpStatus.UNAUTHORIZED;
-        if (e instanceof AccountNotVerifiedException || e instanceof AccountBlockedException) return HttpStatus.FORBIDDEN;
+        if (e instanceof AccountNotVerifiedException || e instanceof AccountBlockedException
+                || e instanceof com.sywater.ms_iam.domain.exception.InternalOnlyException) return HttpStatus.FORBIDDEN;
         if (e instanceof AccountNotFoundException || e instanceof UserNotFoundException) return HttpStatus.NOT_FOUND;
         if (e instanceof EmailAlreadyRegisteredException || e instanceof PhoneAlreadyRegisteredException
                 || e instanceof AlreadyVerifiedException) return HttpStatus.CONFLICT;

@@ -16,6 +16,11 @@ import com.sywater.ms_iam.infrastructure.security.RedisTokenRevocationStore;
 import com.sywater.ms_iam.presentation.controller.ActionCodeController;
 import com.sywater.ms_iam.presentation.controller.AuthController;
 import com.sywater.ms_iam.presentation.controller.ProfileController;
+import com.sywater.ms_iam.presentation.controller.InternalUserController;
+import com.sywater.ms_iam.infrastructure.security.InternalKeyGuard;
+import com.sywater.ms_iam.application.dto.ContactView;
+import com.sywater.ms_iam.domain.exception.UserNotFoundException;
+import org.springframework.test.context.TestPropertySource;
 import com.sywater.ms_iam.presentation.error.ApiExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,8 +60,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * the JWT checks (real RS256 signature with a test key pair, issuer, denylist).
  * Use cases are mocks: their logic is covered by the application tests.
  */
-@WebMvcTest(controllers = {AuthController.class, ProfileController.class, ActionCodeController.class})
-@Import({SecurityConfig.class, ApiExceptionHandler.class, HttpContractTest.Keys.class})
+@WebMvcTest(controllers = {AuthController.class, ProfileController.class, ActionCodeController.class, InternalUserController.class})
+@TestPropertySource(properties = "iam.internal.api-key=test-internal-key-0123456789")
+@Import({SecurityConfig.class, ApiExceptionHandler.class, InternalKeyGuard.class, HttpContractTest.Keys.class})
 class HttpContractTest {
 
     private static final KeyPair KEYS = generateKeys();
@@ -85,6 +91,7 @@ class HttpContractTest {
     @MockitoBean DeleteAccountUseCase deletion;
     @MockitoBean RedisTokenRevocationStore revocations;
     @MockitoBean ActionCodeUseCase actionCodes;
+    @MockitoBean ContactLookupUseCase contactLookup;
 
     private static KeyPair generateKeys() {
         try {
@@ -227,5 +234,42 @@ class HttpContractTest {
                 .andExpect(status().isNoContent());
 
         verify(sessions).logout(eq(id), anyString(), any(Instant.class), isNull(), any());
+    }
+
+    // ── /internal (service-to-service) ───────────────────────────────────
+
+    @Test
+    void internal_contact_needs_the_shared_key_and_never_a_user_token() throws Exception {
+        UUID id = UUID.randomUUID();
+        given(contactLookup.findContact(id)).willReturn(new ContactView(id, "juan@mail.com", "Juan Ome"));
+
+        mvc.perform(get("/internal/users/" + id + "/contact").header("X-Internal-Key", "test-internal-key-0123456789"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.email").value("juan@mail.com"))
+                .andExpect(jsonPath("$.fullName").value("Juan Ome"));
+    }
+
+    @Test
+    void internal_contact_without_or_with_a_wrong_key_is_403_and_a_user_token_is_not_enough() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        mvc.perform(get("/internal/users/" + id + "/contact"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("auth.internal_only"));
+        mvc.perform(get("/internal/users/" + id + "/contact").header("X-Internal-Key", "another-key-0123456789abcd"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/internal/users/" + id + "/contact").header("Authorization", "Bearer " + tokenFor(id, PROPERTIES)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void internal_contact_of_an_unknown_user_is_404_with_the_stable_code() throws Exception {
+        UUID id = UUID.randomUUID();
+        given(contactLookup.findContact(id)).willThrow(new UserNotFoundException());
+
+        mvc.perform(get("/internal/users/" + id + "/contact").header("X-Internal-Key", "test-internal-key-0123456789"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("user.not_found"));
     }
 }

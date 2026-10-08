@@ -33,6 +33,8 @@ spring:
       max-request-size: 3MB
 
 iam:
+  internal:
+    api-key: ${INTERNAL_API_KEY:}          # service-to-service key; the SAME value as "Internal:ApiKey" in the .NET services (empty = /internal/** refused)
   jwt:
     issuer: https://iam.cuidatuagua.local
     key-id: iam-key-1

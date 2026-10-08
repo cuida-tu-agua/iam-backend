@@ -91,6 +91,11 @@ public class ApplicationConfig {
     }
 
     @Bean
+    ContactLookupService contactLookupService(UserRepository users) {
+        return new ContactLookupService(users);
+    }
+
+    @Bean
     ActionCodeService actionCodeService(UserRepository users, OneTimeCodes codes, NotificationSender notifications,
                                         ActivityLog activity, @Value("${iam.codes.action-ttl:5m}") Duration validFor,
                                         Clock clock) {
