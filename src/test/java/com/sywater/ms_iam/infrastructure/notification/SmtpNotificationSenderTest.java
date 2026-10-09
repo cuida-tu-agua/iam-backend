@@ -95,7 +95,7 @@ class SmtpNotificationSenderTest {
         // Assert
         String body = sentMessage().getContent().toString();
         assertThat(body).doesNotContain("<script>").contains("&lt;script&gt;");
-        assertThat(body).contains("&lt;b&gt;válvula&lt;/b&gt;").contains("1 hora");
+        assertThat(body).contains("&lt;b&gt;v&aacute;lvula&lt;/b&gt;").contains("1 hora");
     }
 
     @Test
