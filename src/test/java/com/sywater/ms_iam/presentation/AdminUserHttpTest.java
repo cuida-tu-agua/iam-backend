@@ -98,7 +98,7 @@ class AdminUserHttpTest {
     }
 
     private static AdminUserView view(UUID id, AccountStatus status, UUID blockedBy) {
-        return new AdminUserView(id, "Juan", "Ome", "juan@mail.com", null, status, Instant.parse("2026-09-01T10:00:00Z"),
+        return new AdminUserView(id, "Juan", "Ome", "juan@mail.com", null, java.util.List.of("USER"), status, Instant.parse("2026-09-01T10:00:00Z"),
                 blockedBy == null ? null : Instant.parse("2026-10-08T10:00:00Z"), blockedBy);
     }
 
@@ -144,6 +144,7 @@ class AdminUserHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].id").value(user.toString()))
                 .andExpect(jsonPath("$.items[0].status").value("BLOCKED"))
+                .andExpect(jsonPath("$.items[0].roles[0]").value("USER"))
                 .andExpect(jsonPath("$.items[0].password").doesNotExist())
                 .andExpect(jsonPath("$.page").value(1))
                 .andExpect(jsonPath("$.totalItems").value(11))
