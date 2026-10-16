@@ -63,6 +63,14 @@ iam:
     - http://localhost:19006
     - http://localhost:8081
 
+springdoc:
+  api-docs:
+    enabled: ${OPENAPI_ENABLED:false}      # true only where infra sets it (Docker)
+    path: /v3/api-docs
+
+openapi:
+  server-url: ${IAM_OPENAPI_SERVER_URL:/}  # gateway prefix (/iam) so "Try it out" in Swagger UI works
+
 management:
   endpoints.web.exposure.include: health
   endpoint:

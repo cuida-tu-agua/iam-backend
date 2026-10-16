@@ -68,6 +68,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, PUBLIC_POSTS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
+                        // OpenAPI document (only exists when springdoc.api-docs.enabled=true)
+                        .requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         // service-to-service: protected by X-Internal-Key inside the controller (InternalKeyGuard)
                         .requestMatchers("/internal/**").permitAll()
                         // E14 admin panel: only the ADMIN role (the use cases check it again in the database)
