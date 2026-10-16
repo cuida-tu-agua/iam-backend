@@ -52,7 +52,19 @@ class UserListingTest {
         assertThat(page.items()).extracting(AdminUserView::status)
                 .containsExactly(AccountStatus.UNVERIFIED, AccountStatus.BLOCKED, AccountStatus.ACTIVE, AccountStatus.ACTIVE);
         assertThat(AdminUserView.class.getRecordComponents()).extracting(c -> c.getName())
-                .doesNotContain("password", "passwordHash", "avatarUrl", "roles");
+                .doesNotContain("password", "passwordHash", "avatarUrl");
+    }
+
+    @Test
+    void shows_the_roles_of_each_account_so_the_panel_can_tell_administrators_from_users() {
+        verified("Ana", "ana@mail.com");
+
+        PageView<AdminUserView> page = list(null, null, 0, 20);
+
+        assertThat(page.items()).filteredOn(u -> u.email().equals("admin@mail.com"))
+                .singleElement().satisfies(u -> assertThat(u.roles()).contains("ADMIN"));
+        assertThat(page.items()).filteredOn(u -> u.email().equals("ana@mail.com"))
+                .singleElement().satisfies(u -> assertThat(u.roles()).containsExactly("USER"));
     }
 
     @Test
