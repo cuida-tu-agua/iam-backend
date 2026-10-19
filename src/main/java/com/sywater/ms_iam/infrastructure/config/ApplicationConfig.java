@@ -6,6 +6,8 @@ import com.sywater.ms_iam.application.port.out.ActivityLog;
 import com.sywater.ms_iam.application.port.out.AvatarStorage;
 import com.sywater.ms_iam.application.port.out.CredentialRepository;
 import com.sywater.ms_iam.application.port.out.DeviceCleanup;
+import com.sywater.ms_iam.application.port.out.GoogleIdentityProvider;
+import com.sywater.ms_iam.application.port.out.GoogleLoginStore;
 import com.sywater.ms_iam.application.port.out.LoginAttemptRepository;
 import com.sywater.ms_iam.application.port.out.NotificationSender;
 import com.sywater.ms_iam.application.port.out.OneTimeCodeRepository;
@@ -117,5 +119,15 @@ public class ApplicationConfig {
                                         ActivityLog activity, @Value("${iam.codes.action-ttl:5m}") Duration validFor,
                                         Clock clock) {
         return new ActionCodeService(users, codes, notifications, activity, validFor, clock);
+    }
+
+    @Bean
+    GoogleSignInService googleSignInService(UserRepository users, CredentialRepository credentials,
+                                            GoogleIdentityProvider google, GoogleLoginStore store,
+                                            LoginAttemptRepository attempts, SessionIssuer sessions,
+                                            ActivityLog activity, SecretGenerator generator, SecretHasher hasher,
+                                            GoogleOAuthProperties properties, Clock clock) {
+        return new GoogleSignInService(users, credentials, google, store, attempts, sessions, activity, generator,
+                hasher, properties.allowedRedirects(), clock);
     }
 }

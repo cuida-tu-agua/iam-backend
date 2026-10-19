@@ -38,6 +38,8 @@ public final class TestWorld {
     public final Fakes.Avatars avatars = new Fakes.Avatars();
     public final Fakes.Devices devices = new Fakes.Devices();
     public final Fakes.Metrics metricsSource = new Fakes.Metrics();
+    public final Fakes.Google google = new Fakes.Google();
+    public final Fakes.GoogleStore googleStore = new Fakes.GoogleStore();
 
 
     public final AuthSettings settings = new AuthSettings(Duration.ofHours(1), Duration.ofDays(7),
@@ -57,6 +59,10 @@ public final class TestWorld {
             settings, clock);
     public final AccountDeletionService deletion = new AccountDeletionService(users, credentials, hasher,
             refreshTokens, revocations, avatars, devices, activity, clock);
+
+    public final GoogleSignInService googleSignIn = new GoogleSignInService(users, credentials, google, googleStore,
+            attempts, sessions, activity, generator, hasher,
+            java.util.List.of("https://sy-water.tech", "http://localhost:19006", "saveyourwater:", "exp:"), clock);
 
     public final UserBlockingService blocking = new UserBlockingService(users, refreshTokens, revocations, activity, clock);
 

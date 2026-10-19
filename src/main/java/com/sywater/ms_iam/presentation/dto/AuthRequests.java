@@ -21,6 +21,9 @@ public final class AuthRequests {
 
     public record Login(@NotBlank @Size(max = 320) String email, @NotBlank @Size(max = 128) String password) {}
 
+    /** HU-004: the single-use "google_code" the app received after Google. */
+    public record GoogleExchange(@NotBlank @Size(max = 200) String code) {}
+
     public record Refresh(@NotBlank @Size(max = 200) String refreshToken) {}
 
     public record Logout(@Size(max = 200) String refreshToken) {}

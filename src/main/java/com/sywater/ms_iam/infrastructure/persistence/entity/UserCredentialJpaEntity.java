@@ -15,6 +15,7 @@ import java.util.UUID;
 public class UserCredentialJpaEntity {
 
     public static final String LOCAL = "LOCAL";
+    public static final String GOOGLE = "GOOGLE";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,11 +49,22 @@ public class UserCredentialJpaEntity {
         return e;
     }
 
+    /** HU-004: the "sub" of Google's ID token (CK_cred_secret: a GOOGLE credential has no password hash). */
+    public static UserCredentialJpaEntity google(UUID userId, String googleId, Instant now) {
+        UserCredentialJpaEntity e = new UserCredentialJpaEntity();
+        e.userId = userId;
+        e.credentialType = GOOGLE;
+        e.googleId = googleId;
+        e.createdAt = now;
+        return e;
+    }
+
     public Long getId() { return id; }
     public UUID getUserId() { return userId; }
     public String getCredentialType() { return credentialType; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getGoogleId() { return googleId; }
+    public void setGoogleId(String googleId) { this.googleId = googleId; }
     public Instant getCreatedAt() { return createdAt; }
 }

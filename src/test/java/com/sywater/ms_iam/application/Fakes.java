@@ -89,6 +89,41 @@ public final class Fakes {
         public final Map<UUID, String> hashes = new HashMap<>();
         @Override public Optional<String> findPasswordHash(UUID userId) { return Optional.ofNullable(hashes.get(userId)); }
         @Override public void savePasswordHash(UUID userId, String passwordHash) { hashes.put(userId, passwordHash); }
+
+        public final Map<UUID, String> googleIds = new HashMap<>();
+        @Override public Optional<UUID> findUserIdByGoogleId(String googleId) {
+            return googleIds.entrySet().stream().filter(e -> e.getValue().equals(googleId)).map(Map.Entry::getKey).findFirst();
+        }
+        @Override public Optional<String> findGoogleId(UUID userId) { return Optional.ofNullable(googleIds.get(userId)); }
+        @Override public void saveGoogleId(UUID userId, String googleId) { googleIds.put(userId, googleId); }
+        @Override public void removeGoogleId(UUID userId) { googleIds.remove(userId); }
+    }
+
+    /** Google that answers with the identity the test sets; "bad-code" is rejected like the real token endpoint. */
+    public static final class Google implements com.sywater.ms_iam.application.port.out.GoogleIdentityProvider {
+        public boolean configured = true;
+        public GoogleIdentity identity = new GoogleIdentity("google-sub-1", "juan@gmail.com", true, "Juan", "Ome");
+        public final List<String> usedVerifiers = new ArrayList<>();
+        @Override public boolean configured() { return configured; }
+        @Override public java.net.URI authorizationUrl(String state, String codeVerifier) {
+            return java.net.URI.create("https://accounts.google.test/auth?state=" + state);
+        }
+        @Override public GoogleIdentity identify(String authorizationCode, String codeVerifier) {
+            if ("bad-code".equals(authorizationCode)) {
+                throw new com.sywater.ms_iam.domain.exception.GoogleSignInFailedException("rejected");
+            }
+            usedVerifiers.add(codeVerifier);
+            return identity;
+        }
+    }
+
+    public static final class GoogleStore implements com.sywater.ms_iam.application.port.out.GoogleLoginStore {
+        public final Map<String, PendingAttempt> attempts = new HashMap<>();
+        public final Map<String, UUID> handoffs = new HashMap<>();
+        @Override public void saveAttempt(String state, PendingAttempt attempt, Duration ttl) { attempts.put(state, attempt); }
+        @Override public Optional<PendingAttempt> takeAttempt(String state) { return Optional.ofNullable(attempts.remove(state)); }
+        @Override public void saveHandoff(String codeHash, UUID userId, Duration ttl) { handoffs.put(codeHash, userId); }
+        @Override public Optional<UUID> takeHandoff(String codeHash) { return Optional.ofNullable(handoffs.remove(codeHash)); }
     }
 
     /** "hash" = "H(" + raw + ")": readable in assertions and never equal to the raw value. */

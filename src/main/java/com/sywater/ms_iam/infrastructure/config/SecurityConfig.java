@@ -38,6 +38,12 @@ public class SecurityConfig {
             "/api/auth/register", "/api/auth/verify-email", "/api/auth/verify-email/resend",
             "/api/auth/login", "/api/auth/refresh",
             "/api/auth/password/forgot", "/api/auth/password/reset",
+            "/api/auth/google/exchange",
+    };
+
+    /** HU-004: the browser / phone opens these with a plain GET (no token yet). */
+    private static final String[] PUBLIC_GETS = {
+            "/api/auth/google/status", "/api/auth/google/start", "/api/auth/google/callback",
     };
 
     @Bean
@@ -66,6 +72,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, PUBLIC_POSTS).permitAll()
+                        .requestMatchers(HttpMethod.GET, PUBLIC_GETS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/error").permitAll()
                         // OpenAPI document (only exists when springdoc.api-docs.enabled=true)

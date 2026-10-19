@@ -34,4 +34,30 @@ public class JpaCredentialRepositoryAdapter implements CredentialRepository {
         credential.setPasswordHash(passwordHash);
         credentials.save(credential);
     }
+
+    @Override
+    public Optional<UUID> findUserIdByGoogleId(String googleId) {
+        return credentials.findByGoogleId(googleId).map(UserCredentialJpaEntity::getUserId);
+    }
+
+    @Override
+    public Optional<String> findGoogleId(UUID userId) {
+        return credentials.findByUserIdAndCredentialType(userId, UserCredentialJpaEntity.GOOGLE)
+                .map(UserCredentialJpaEntity::getGoogleId);
+    }
+
+    @Override
+    public void saveGoogleId(UUID userId, String googleId) {
+        UserCredentialJpaEntity credential = credentials
+                .findByUserIdAndCredentialType(userId, UserCredentialJpaEntity.GOOGLE)
+                .orElseGet(() -> UserCredentialJpaEntity.google(userId, googleId, clock.instant()));
+        credential.setGoogleId(googleId);
+        credentials.save(credential);
+    }
+
+    @Override
+    public void removeGoogleId(UUID userId) {
+        credentials.findByUserIdAndCredentialType(userId, UserCredentialJpaEntity.GOOGLE).ifPresent(credentials::delete);
+        credentials.flush();   // the unique index on google_id must be free before another account takes it
+    }
 }
