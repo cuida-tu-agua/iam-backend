@@ -180,4 +180,63 @@ class GoogleSignInTest {
         assertThat(w.googleSignIn.enabled()).isFalse();
         assertThatThrownBy(() -> w.googleSignIn.start(WEB)).isInstanceOf(GoogleSignInDisabledException.class);
     }
+
+    /** Signs in with Google, then starts the re-confirmation of that account and returns its google_reauth code. */
+    private String reconfirmWithGoogle(UUID userId, String authorizationCode) {
+        URI google = w.googleSignIn.startReauth(userId, WEB);
+        String state = google.getQuery().substring("state=".length());
+        Map<String, String> back = query(w.googleSignIn.finish(authorizationCode, state, null, TestWorld.CTX));
+        return back.get("google_reauth");
+    }
+
+    @Test
+    void a_google_account_is_deleted_only_after_confirming_it_with_its_google_account() {
+        signInThroughGoogle(WEB, "code-1");
+        UUID id = user("juan@gmail.com").id();
+
+        assertThatThrownBy(() -> w.deletion.deleteAccount(id, null, null, TestWorld.CTX))
+                .isInstanceOf(GoogleSignInFailedException.class);             // no password, no code: refused
+        assertThat(user("juan@gmail.com").isDeleted()).isFalse();
+
+        String code = reconfirmWithGoogle(id, "code-2");
+        assertThat(code).isNotBlank();
+        assertThatThrownBy(() -> w.googleSignIn.exchange(code, TestWorld.CTX))
+                .isInstanceOf(GoogleSignInFailedException.class);             // a re-confirmation is not a login code
+
+        w.deletion.deleteAccount(id, null, code, TestWorld.CTX);
+        assertThat(w.users.findById(id).orElseThrow().isDeleted()).isTrue();
+        assertThat(w.activity.actions).contains("ACCOUNT_DELETED");
+    }
+
+    @Test
+    void the_re_confirmation_code_works_once_and_only_for_its_account() {
+        signInThroughGoogle(WEB, "code-1");
+        UUID id = user("juan@gmail.com").id();
+        String code = reconfirmWithGoogle(id, "code-2");
+
+        assertThatThrownBy(() -> w.googleSignIn.confirmReauth(UUID.randomUUID(), code))
+                .isInstanceOf(GoogleSignInFailedException.class);             // another account
+        assertThatThrownBy(() -> w.googleSignIn.confirmReauth(id, code))
+                .isInstanceOf(GoogleSignInFailedException.class);             // the code was spent by that attempt
+
+        String second = reconfirmWithGoogle(id, "code-3");
+        w.googleSignIn.confirmReauth(id, second);
+        assertThatThrownBy(() -> w.googleSignIn.confirmReauth(id, second))
+                .isInstanceOf(GoogleSignInFailedException.class);             // already used
+    }
+
+    @Test
+    void re_confirming_with_another_google_account_is_refused() {
+        signInThroughGoogle(WEB, "code-1");
+        UUID id = user("juan@gmail.com").id();
+
+        URI google = w.googleSignIn.startReauth(id, WEB);
+        String state = google.getQuery().substring("state=".length());
+        w.google.identity = new GoogleIdentity("google-sub-2", "otra@gmail.com", true, "Otra", "Persona");
+        Map<String, String> back = query(w.googleSignIn.finish("code-2", state, null, TestWorld.CTX));
+
+        assertThat(back).doesNotContainKey("google_reauth");
+        assertThat(back).containsEntry("google_error", "auth.google_failed");
+        assertThat(w.users.findById(id).orElseThrow().isDeleted()).isFalse();
+    }
 }

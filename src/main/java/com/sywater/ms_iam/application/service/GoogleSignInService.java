@@ -20,6 +20,7 @@ import com.sywater.ms_iam.domain.exception.GoogleSignInCancelledException;
 import com.sywater.ms_iam.domain.exception.GoogleSignInDisabledException;
 import com.sywater.ms_iam.domain.exception.GoogleSignInFailedException;
 import com.sywater.ms_iam.domain.exception.InvalidRedirectException;
+import com.sywater.ms_iam.domain.exception.UserNotFoundException;
 import com.sywater.ms_iam.domain.model.Email;
 import com.sywater.ms_iam.domain.model.User;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,8 @@ public class GoogleSignInService implements GoogleSignInUseCase {
 
     static final Duration ATTEMPT_TTL = Duration.ofMinutes(10);
     static final Duration HANDOFF_TTL = Duration.ofMinutes(2);
+    /** Keeps the re-confirmation codes apart from the sign-in codes in the store. */
+    static final String REAUTH_PREFIX = "reauth:";
     static final String FALLBACK_FIRST_NAME = "Usuario";
     static final String FALLBACK_LAST_NAME = "Sin apellido";
 
@@ -92,12 +95,26 @@ public class GoogleSignInService implements GoogleSignInUseCase {
 
     @Override
     public URI start(String appRedirect) {
+        return startAttempt(appRedirect, null);
+    }
+
+    @Override
+    public URI startReauth(UUID userId, String appRedirect) {
+        if (!google.configured()) throw new GoogleSignInDisabledException();
+        users.findById(userId).filter(u -> !u.isDeleted()).orElseThrow(UserNotFoundException::new);
+        if (credentials.findGoogleId(userId).isEmpty()) {
+            throw new GoogleSignInFailedException("This account has no Google account linked.");
+        }
+        return startAttempt(appRedirect, userId);
+    }
+
+    private URI startAttempt(String appRedirect, UUID reauthUserId) {
         if (!google.configured()) throw new GoogleSignInDisabledException();
         URI redirect = allowedRedirect(appRedirect);
 
         String state = generator.opaqueToken();
         String codeVerifier = generator.opaqueToken();   // 43 URL-safe characters: a valid PKCE verifier
-        store.saveAttempt(state, new PendingAttempt(redirect.toString(), codeVerifier), ATTEMPT_TTL);
+        store.saveAttempt(state, new PendingAttempt(redirect.toString(), codeVerifier, reauthUserId), ATTEMPT_TTL);
         return google.authorizationUrl(state, codeVerifier);
     }
 
@@ -113,6 +130,8 @@ public class GoogleSignInService implements GoogleSignInUseCase {
                 throw new GoogleSignInCancelledException();
             }
             GoogleIdentity identity = google.identify(authorizationCode, attempt.codeVerifier());
+            if (attempt.reauthUserId() != null) return confirmedForDeletion(attempt, identity);
+
             User user = findLinkOrCreate(identity, context);
             if (user.isBlocked()) {
                 attempts.record(user.id(), user.email().value(), context.ip(), false, "ACCOUNT_BLOCKED", clock.instant());
@@ -128,6 +147,13 @@ public class GoogleSignInService implements GoogleSignInUseCase {
     }
 
     @Override
+    public void confirmReauth(UUID userId, String reauthCode) {
+        if (reauthCode == null || reauthCode.isBlank()) throw expired();
+        UUID owner = store.takeHandoff(hasher.hash(REAUTH_PREFIX + reauthCode)).orElseThrow(GoogleSignInService::expired);
+        if (!owner.equals(userId)) throw expired();
+    }
+
+    @Override
     @Transactional
     public AuthResult exchange(String handoffCode, RequestContext context) {
         Instant now = clock.instant();
@@ -140,6 +166,17 @@ public class GoogleSignInService implements GoogleSignInUseCase {
         attempts.record(user.id(), user.email().value(), context.ip(), true, null, now);
         activity.record(user.id(), "LOGIN_GOOGLE", Map.of(), context.ip(), now);
         return sessions.open(user, context, now);
+    }
+
+    /** The Google account that comes back must be the one linked to the account that asked to re-confirm. */
+    private URI confirmedForDeletion(PendingAttempt attempt, GoogleIdentity identity) {
+        Optional<String> linked = credentials.findGoogleId(attempt.reauthUserId());
+        if (linked.isEmpty() || !linked.get().equals(identity.subject())) {
+            throw new GoogleSignInFailedException("The Google account does not belong to this account.");
+        }
+        String code = generator.opaqueToken();
+        store.saveHandoff(hasher.hash(REAUTH_PREFIX + code), attempt.reauthUserId(), HANDOFF_TTL);
+        return withParameter(attempt.appRedirect(), "google_reauth", code);
     }
 
     /** HU-004: Google id already linked → that account; same e-mail → link both methods; otherwise a new account. */

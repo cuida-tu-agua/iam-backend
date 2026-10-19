@@ -1,6 +1,7 @@
 package com.sywater.ms_iam.infrastructure.config;
 
 import com.sywater.ms_iam.application.dto.AuthSettings;
+import com.sywater.ms_iam.application.port.in.GoogleSignInUseCase;
 import com.sywater.ms_iam.application.port.out.AccessTokenIssuer;
 import com.sywater.ms_iam.application.port.out.ActivityLog;
 import com.sywater.ms_iam.application.port.out.AvatarStorage;
@@ -88,9 +89,10 @@ public class ApplicationConfig {
     AccountDeletionService accountDeletionService(UserRepository users, CredentialRepository credentials,
                                                   PasswordHasher hasher, RefreshTokenRepository refreshTokens,
                                                   TokenRevocationStore revocations, AvatarStorage avatars,
-                                                  DeviceCleanup devices, ActivityLog activity, Clock clock) {
+                                                  DeviceCleanup devices, ActivityLog activity,
+                                                  GoogleSignInUseCase google, Clock clock) {
         return new AccountDeletionService(users, credentials, hasher, refreshTokens, revocations, avatars, devices,
-                activity, clock);
+                activity, google, clock);
     }
 
     @Bean

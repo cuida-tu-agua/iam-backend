@@ -22,5 +22,14 @@ public interface GoogleLoginStore {
 
     Optional<UUID> takeHandoff(String codeHash);
 
-    record PendingAttempt(String appRedirect, String codeVerifier) {}
+    /**
+     * reauthUserId is set when the attempt re-confirms an account before deleting it (the account must be the one
+     * linked to the Google account that comes back); null for a normal sign-in.
+     */
+    record PendingAttempt(String appRedirect, String codeVerifier, UUID reauthUserId) {
+
+        public PendingAttempt(String appRedirect, String codeVerifier) {
+            this(appRedirect, codeVerifier, null);
+        }
+    }
 }

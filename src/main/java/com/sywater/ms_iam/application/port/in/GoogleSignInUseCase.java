@@ -4,9 +4,20 @@ import com.sywater.ms_iam.application.dto.AuthResult;
 import com.sywater.ms_iam.application.dto.RequestContext;
 
 import java.net.URI;
+import java.util.UUID;
 
 /** HU-004: register and sign in with Google, on web and mobile. */
 public interface GoogleSignInUseCase {
+
+    /**
+     * Re-confirms the signed-in account with its Google account before a sensitive action (deleting it): returns
+     * Google's consent page. Google calls back and the app address gets "google_reauth" (single-use, 2 minutes),
+     * which {@link #confirmReauth} consumes. The Google account must be the one linked to this account.
+     */
+    URI startReauth(UUID userId, String appRedirect);
+
+    /** Consumes the "google_reauth" code of the account. Throws when it is missing, expired, used or of another account. */
+    void confirmReauth(UUID userId, String reauthCode);
 
     /** True when the server has Google configured (the app shows the button only then). */
     boolean enabled();

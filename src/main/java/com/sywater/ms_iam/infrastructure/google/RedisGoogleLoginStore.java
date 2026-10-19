@@ -23,17 +23,20 @@ public class RedisGoogleLoginStore implements GoogleLoginStore {
 
     @Override
     public void saveAttempt(String state, PendingAttempt attempt, Duration ttl) {
-        // The verifier is URL-safe base64 and the redirect a validated URI: neither has a line break
-        redis.opsForValue().set(ATTEMPT_PREFIX + state, attempt.codeVerifier() + "\n" + attempt.appRedirect(), ttl);
+        // The verifier is URL-safe base64, the redirect a validated URI and the user id a UUID: none has a line break
+        String reauth = attempt.reauthUserId() == null ? "" : attempt.reauthUserId().toString();
+        redis.opsForValue().set(ATTEMPT_PREFIX + state,
+                attempt.codeVerifier() + "\n" + attempt.appRedirect() + "\n" + reauth, ttl);
     }
 
     @Override
     public Optional<PendingAttempt> takeAttempt(String state) {
         String value = redis.opsForValue().getAndDelete(ATTEMPT_PREFIX + state);
         if (value == null) return Optional.empty();
-        int split = value.indexOf('\n');
-        if (split < 0) return Optional.empty();
-        return Optional.of(new PendingAttempt(value.substring(split + 1), value.substring(0, split)));
+        String[] parts = value.split("\n", -1);
+        if (parts.length < 2) return Optional.empty();
+        UUID reauth = parts.length >= 3 && !parts[2].isEmpty() ? UUID.fromString(parts[2]) : null;
+        return Optional.of(new PendingAttempt(parts[1], parts[0], reauth));
     }
 
     @Override

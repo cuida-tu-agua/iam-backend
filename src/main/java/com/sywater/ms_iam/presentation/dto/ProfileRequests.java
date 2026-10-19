@@ -16,5 +16,6 @@ public final class ProfileRequests {
     public record ChangePassword(@NotBlank @Size(max = 128) String currentPassword,
                                  @NotBlank @Size(max = 128) String newPassword) {}
 
-    public record DeleteAccount(@NotBlank @Size(max = 128) String password) {}
+    /** Either the current password, or the "google_reauth" code of an account created with Google. */
+    public record DeleteAccount(@Size(max = 128) String password, @Size(max = 200) String googleReauthCode) {}
 }

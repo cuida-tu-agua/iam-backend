@@ -2,6 +2,7 @@ package com.sywater.ms_iam.application.service;
 
 import com.sywater.ms_iam.application.dto.AuthSettings;
 import com.sywater.ms_iam.application.dto.RequestContext;
+import com.sywater.ms_iam.application.dto.SignInMethods;
 import com.sywater.ms_iam.application.dto.UserView;
 import com.sywater.ms_iam.application.port.in.ProfileUseCase;
 import com.sywater.ms_iam.application.port.out.ActivityLog;
@@ -52,6 +53,14 @@ public class ProfileService implements ProfileUseCase {
     @Transactional(readOnly = true)
     public UserView getProfile(UUID userId) {
         return UserView.from(load(userId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SignInMethods signInMethods(UUID userId) {
+        load(userId);
+        return new SignInMethods(credentials.findPasswordHash(userId).isPresent(),
+                credentials.findGoogleId(userId).isPresent());
     }
 
     @Override

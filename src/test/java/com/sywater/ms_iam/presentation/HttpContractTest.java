@@ -88,6 +88,7 @@ class HttpContractTest {
     @MockitoBean SessionUseCase sessions;
     @MockitoBean PasswordRecoveryUseCase recovery;
     @MockitoBean ProfileUseCase profile;
+    @MockitoBean GoogleSignInUseCase googleSignIn;
     @MockitoBean DeleteAccountUseCase deletion;
     @MockitoBean RedisTokenRevocationStore revocations;
     @MockitoBean ActionCodeUseCase actionCodes;

@@ -57,12 +57,11 @@ public final class TestWorld {
             oneTimeCodes, refreshTokens, revocations, mailbox, activity, settings, clock);
     public final ProfileService profile = new ProfileService(users, credentials, hasher, avatars, mailbox, activity,
             settings, clock);
-    public final AccountDeletionService deletion = new AccountDeletionService(users, credentials, hasher,
-            refreshTokens, revocations, avatars, devices, activity, clock);
-
     public final GoogleSignInService googleSignIn = new GoogleSignInService(users, credentials, google, googleStore,
             attempts, sessions, activity, generator, hasher,
             java.util.List.of("https://sy-water.tech", "http://localhost:19006", "saveyourwater:", "exp:"), clock);
+    public final AccountDeletionService deletion = new AccountDeletionService(users, credentials, hasher,
+            refreshTokens, revocations, avatars, devices, activity, googleSignIn, clock);
 
     public final UserBlockingService blocking = new UserBlockingService(users, refreshTokens, revocations, activity, clock);
 

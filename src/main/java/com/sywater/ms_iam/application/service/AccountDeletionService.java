@@ -2,6 +2,7 @@ package com.sywater.ms_iam.application.service;
 
 import com.sywater.ms_iam.application.dto.RequestContext;
 import com.sywater.ms_iam.application.port.in.DeleteAccountUseCase;
+import com.sywater.ms_iam.application.port.in.GoogleSignInUseCase;
 import com.sywater.ms_iam.application.port.out.ActivityLog;
 import com.sywater.ms_iam.application.port.out.AvatarStorage;
 import com.sywater.ms_iam.application.port.out.CredentialRepository;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class AccountDeletionService implements DeleteAccountUseCase {
@@ -30,11 +32,13 @@ public class AccountDeletionService implements DeleteAccountUseCase {
     private final AvatarStorage avatars;
     private final DeviceCleanup devices;
     private final ActivityLog activity;
+    private final GoogleSignInUseCase google;
     private final Clock clock;
 
     public AccountDeletionService(UserRepository users, CredentialRepository credentials, PasswordHasher passwordHasher,
                                   RefreshTokenRepository refreshTokens, TokenRevocationStore revocations,
-                                  AvatarStorage avatars, DeviceCleanup devices, ActivityLog activity, Clock clock) {
+                                  AvatarStorage avatars, DeviceCleanup devices, ActivityLog activity,
+                                  GoogleSignInUseCase google, Clock clock) {
         this.users = users;
         this.credentials = credentials;
         this.passwordHasher = passwordHasher;
@@ -43,17 +47,23 @@ public class AccountDeletionService implements DeleteAccountUseCase {
         this.avatars = avatars;
         this.devices = devices;
         this.activity = activity;
+        this.google = google;
         this.clock = clock;
     }
 
     @Override
     @Transactional
-    public void deleteAccount(UUID userId, String password, RequestContext context) {
+    public void deleteAccount(UUID userId, String password, String googleReauthCode, RequestContext context) {
         Instant now = clock.instant();
         User user = users.findById(userId).filter(u -> !u.isDeleted()).orElseThrow(UserNotFoundException::new);
 
-        String hash = credentials.findPasswordHash(userId).orElseThrow(CurrentPasswordIncorrectException::new);
-        if (!passwordHasher.matches(password == null ? "" : password, hash)) throw new CurrentPasswordIncorrectException();
+        boolean byGoogle = googleReauthCode != null && !googleReauthCode.isBlank();
+        Optional<String> hash = credentials.findPasswordHash(userId);
+        if (byGoogle || hash.isEmpty()) {
+            google.confirmReauth(userId, googleReauthCode);   // throws when the code is missing, expired or of another account
+        } else if (!passwordHasher.matches(password == null ? "" : password, hash.get())) {
+            throw new CurrentPasswordIncorrectException();
+        }
 
         devices.unlinkAllDevicesOf(userId);
         refreshTokens.revokeAllForUser(userId, now);
