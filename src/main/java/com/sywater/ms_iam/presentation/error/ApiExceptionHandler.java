@@ -100,16 +100,19 @@ public class ApiExceptionHandler {
 
     static HttpStatus statusOf(DomainException e) {
         if (e instanceof EmailNotFoundException || e instanceof WrongPasswordException
-                || e instanceof InvalidRefreshTokenException) return HttpStatus.UNAUTHORIZED;
+                || e instanceof InvalidRefreshTokenException
+                || e instanceof com.sywater.ms_iam.domain.exception.GoogleSignInFailedException) return HttpStatus.UNAUTHORIZED;
         if (e instanceof AccountNotVerifiedException || e instanceof AccountBlockedException
                 || e instanceof com.sywater.ms_iam.domain.exception.InternalOnlyException
                 || e instanceof com.sywater.ms_iam.domain.exception.NotAdministratorException) return HttpStatus.FORBIDDEN;
         if (e instanceof AccountNotFoundException || e instanceof UserNotFoundException) return HttpStatus.NOT_FOUND;
         if (e instanceof EmailAlreadyRegisteredException || e instanceof PhoneAlreadyRegisteredException
-                || e instanceof AlreadyVerifiedException) return HttpStatus.CONFLICT;
+                || e instanceof AlreadyVerifiedException
+                || e instanceof com.sywater.ms_iam.domain.exception.GoogleAccountConflictException) return HttpStatus.CONFLICT;
         if (e instanceof AccountLockedException) return HttpStatus.LOCKED;                  // 423
         if (e instanceof CodeRecentlySentException) return HttpStatus.TOO_MANY_REQUESTS;    // 429
-        if (e instanceof com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException) return HttpStatus.SERVICE_UNAVAILABLE;
+        if (e instanceof com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException
+                || e instanceof com.sywater.ms_iam.domain.exception.GoogleSignInDisabledException) return HttpStatus.SERVICE_UNAVAILABLE;
         return HttpStatus.BAD_REQUEST;   // invalid data, weak password, wrong/expired code, avatar...
     }
 

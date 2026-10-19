@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface SpringCredentialJpaRepository extends JpaRepository<UserCredentialJpaEntity, Long> {
 
     Optional<UserCredentialJpaEntity> findByUserIdAndCredentialType(UUID userId, String credentialType); // UQ_cred_user_type
+
+    Optional<UserCredentialJpaEntity> findByGoogleId(String googleId); // UX_cred_google_id
 }

@@ -65,6 +65,15 @@ public final class User {
                 email, phone, null, false, null, null, null, null, now, now, EnumSet.of(Role.USER));
     }
 
+    /**
+     * HU-004: an account created with "Continuar con Google". Google already proved the e-mail belongs to the person,
+     * so it starts verified; it has no phone and no password (the user can create one later with HU-005).
+     */
+    public static User registerWithGoogle(String firstName, String lastName, Email email, Instant now) {
+        return new User(UUID.randomUUID(), cleanName(firstName, "first name"), cleanName(lastName, "last name"),
+                email, null, null, true, null, null, null, null, now, now, EnumSet.of(Role.USER));
+    }
+
     public static User restore(UUID id, String firstName, String lastName, Email email, PhoneNumber phone,
                                String avatarUrl, boolean emailVerified, Instant accountLockedUntil,
                                Instant blockedAt, Instant deletedAt, Instant createdAt, Instant updatedAt,
@@ -103,6 +112,13 @@ public final class User {
 
     public void verifyEmail(Instant now) {
         if (emailVerified) throw new AlreadyVerifiedException();
+        this.emailVerified = true;
+        this.updatedAt = now;
+    }
+
+    /** HU-004: signing in with a Google account that owns this e-mail also proves it, so the account is verified. */
+    public void verifyEmailThroughGoogle(Instant now) {
+        if (emailVerified) return;
         this.emailVerified = true;
         this.updatedAt = now;
     }
