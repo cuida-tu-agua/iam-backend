@@ -110,6 +110,7 @@ public class ApiExceptionHandler {
                 || e instanceof AlreadyVerifiedException
                 || e instanceof com.sywater.ms_iam.domain.exception.GoogleAccountConflictException) return HttpStatus.CONFLICT;
         if (e instanceof AccountLockedException) return HttpStatus.LOCKED;                  // 423
+        if (e instanceof com.sywater.ms_iam.domain.exception.PhoneNotReachableException) return HttpStatus.UNPROCESSABLE_CONTENT;   // 422 (HU-028)
         if (e instanceof CodeRecentlySentException) return HttpStatus.TOO_MANY_REQUESTS;    // 429
         if (e instanceof com.sywater.ms_iam.domain.exception.ExternalServiceUnavailableException
                 || e instanceof com.sywater.ms_iam.domain.exception.GoogleSignInDisabledException) return HttpStatus.SERVICE_UNAVAILABLE;

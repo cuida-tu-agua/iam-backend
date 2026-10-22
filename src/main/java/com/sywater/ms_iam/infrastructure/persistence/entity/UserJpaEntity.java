@@ -32,6 +32,10 @@ public class UserJpaEntity {
     @Column(name = "phone_verified", nullable = false)
     private boolean phoneVerified;
 
+    /** HU-028: SMS or WHATSAPP, the mode the phone was verified with (null when it is not verified). */
+    @Column(name = "phone_channel", length = 10)
+    private String phoneChannel;
+
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
@@ -74,6 +78,9 @@ public class UserJpaEntity {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
     public boolean isPhoneVerified() { return phoneVerified; }
+    public void setPhoneVerified(boolean phoneVerified) { this.phoneVerified = phoneVerified; }
+    public String getPhoneChannel() { return phoneChannel; }
+    public void setPhoneChannel(String phoneChannel) { this.phoneChannel = phoneChannel; }
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public boolean isEmailVerified() { return emailVerified; }

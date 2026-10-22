@@ -123,6 +123,16 @@ public class ApplicationConfig {
         return new ActionCodeService(users, codes, notifications, activity, validFor, clock);
     }
 
+    /** HU-028: verify the phone by SMS or WhatsApp (the code travels through ms-notification). */
+    @Bean
+    com.sywater.ms_iam.application.service.PhoneVerificationService phoneVerificationService(
+            UserRepository users, com.sywater.ms_iam.application.port.out.PhoneVerificationRepository codes,
+            SecretGenerator generator, SecretHasher hasher, com.sywater.ms_iam.application.port.out.ShortMessageGateway messages,
+            ActivityLog activity, AuthSettings settings, @Value("${iam.codes.phone-ttl:5m}") Duration validFor, Clock clock) {
+        return new com.sywater.ms_iam.application.service.PhoneVerificationService(users, codes, generator, hasher, messages,
+                activity, settings, validFor, clock);
+    }
+
     @Bean
     GoogleSignInService googleSignInService(UserRepository users, CredentialRepository credentials,
                                             GoogleIdentityProvider google, GoogleLoginStore store,

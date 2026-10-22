@@ -16,6 +16,11 @@ public record PhoneNumber(String value) {
         }
     }
 
+    /** "+573001112233" → "+57300***233": enough to recognize it, not enough to read it. */
+    public String masked() {
+        return value.length() < 8 ? "***" : value.substring(0, 6) + "***" + value.substring(value.length() - 3);
+    }
+
     public static PhoneNumber ofNullable(String raw) {
         return raw == null || raw.isBlank() ? null : new PhoneNumber(raw);
     }
