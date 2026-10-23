@@ -25,6 +25,9 @@ public class ContactLookupService implements ContactLookupUseCase {
         User user = users.findById(userId)
                 .filter(u -> !u.isDeleted() && u.isEmailVerified())
                 .orElseThrow(UserNotFoundException::new);
-        return new ContactView(user.id(), user.email().value(), user.fullName());
+        boolean verified = user.isPhoneVerified();
+        return new ContactView(user.id(), user.email().value(), user.fullName(),
+                user.phone() == null ? null : user.phone().value(), verified,
+                verified ? user.phoneChannel().name() : null);
     }
 }

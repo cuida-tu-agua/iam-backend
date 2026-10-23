@@ -30,6 +30,8 @@ public final class User {
     private String lastName;
     private Email email;
     private PhoneNumber phone;
+    private boolean phoneVerified;
+    private PhoneChannel phoneChannel;
     private String avatarUrl;
     private boolean emailVerified;
     private Instant accountLockedUntil;
@@ -40,14 +42,16 @@ public final class User {
     private Instant updatedAt;
     private final Set<Role> roles;
 
-    private User(UUID id, String firstName, String lastName, Email email, PhoneNumber phone, String avatarUrl,
-                 boolean emailVerified, Instant accountLockedUntil, Instant blockedAt, UUID blockedBy, Instant deletedAt,
-                 Instant createdAt, Instant updatedAt, Set<Role> roles) {
+    private User(UUID id, String firstName, String lastName, Email email, PhoneNumber phone, boolean phoneVerified,
+                 PhoneChannel phoneChannel, String avatarUrl, boolean emailVerified, Instant accountLockedUntil,
+                 Instant blockedAt, UUID blockedBy, Instant deletedAt, Instant createdAt, Instant updatedAt, Set<Role> roles) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.phone = phone;
+        this.phoneVerified = phoneVerified && phone != null && phoneChannel != null;
+        this.phoneChannel = this.phoneVerified ? phoneChannel : null;
         this.avatarUrl = avatarUrl;
         this.emailVerified = emailVerified;
         this.accountLockedUntil = accountLockedUntil;
@@ -62,7 +66,7 @@ public final class User {
     /**  a new account starts unverified and with the USER role. */
     public static User register(String firstName, String lastName, Email email, PhoneNumber phone, Instant now) {
         return new User(UUID.randomUUID(), cleanName(firstName, "first name"), cleanName(lastName, "last name"),
-                email, phone, null, false, null, null, null, null, now, now, EnumSet.of(Role.USER));
+                email, phone, false, null, null, false, null, null, null, null, now, now, EnumSet.of(Role.USER));
     }
 
     /**
@@ -71,7 +75,7 @@ public final class User {
      */
     public static User registerWithGoogle(String firstName, String lastName, Email email, Instant now) {
         return new User(UUID.randomUUID(), cleanName(firstName, "first name"), cleanName(lastName, "last name"),
-                email, null, null, true, null, null, null, null, now, now, EnumSet.of(Role.USER));
+                email, null, false, null, null, true, null, null, null, null, now, now, EnumSet.of(Role.USER));
     }
 
     public static User restore(UUID id, String firstName, String lastName, Email email, PhoneNumber phone,
@@ -86,8 +90,17 @@ public final class User {
                                String avatarUrl, boolean emailVerified, Instant accountLockedUntil,
                                Instant blockedAt, UUID blockedBy, Instant deletedAt, Instant createdAt,
                                Instant updatedAt, Set<Role> roles) {
-        return new User(id, firstName, lastName, email, phone, avatarUrl, emailVerified, accountLockedUntil,
+        return restore(id, firstName, lastName, email, phone, false, null, avatarUrl, emailVerified, accountLockedUntil,
                 blockedAt, blockedBy, deletedAt, createdAt, updatedAt, roles);
+    }
+
+    /** HU-028: with the phone verification (whether the phone is verified and by which mode). */
+    public static User restore(UUID id, String firstName, String lastName, Email email, PhoneNumber phone,
+                               boolean phoneVerified, PhoneChannel phoneChannel, String avatarUrl, boolean emailVerified,
+                               Instant accountLockedUntil, Instant blockedAt, UUID blockedBy, Instant deletedAt,
+                               Instant createdAt, Instant updatedAt, Set<Role> roles) {
+        return new User(id, firstName, lastName, email, phone, phoneVerified, phoneChannel, avatarUrl, emailVerified,
+                accountLockedUntil, blockedAt, blockedBy, deletedAt, createdAt, updatedAt, roles);
     }
 
 
@@ -126,7 +139,24 @@ public final class User {
     public void updateProfile(String firstName, String lastName, PhoneNumber phone, Instant now) {
         this.firstName = cleanName(firstName, "first name");
         this.lastName = cleanName(lastName, "last name");
+        if (!java.util.Objects.equals(this.phone, phone)) {
+            // HU-028: a new number has not proved anything yet; it must be verified again (and its mode chosen again)
+            this.phoneVerified = false;
+            this.phoneChannel = null;
+        }
         this.phone = phone;
+        this.updatedAt = now;
+    }
+
+    /**
+     * HU-028: the code sent to {@code phone} by {@code channel} was confirmed. The phone becomes the user's verified one
+     * and every critical alert will use that same mode.
+     */
+    public void verifyPhone(PhoneNumber phone, PhoneChannel channel, Instant now) {
+        if (phone == null || channel == null) throw new InvalidUserDataException("The phone and its mode are required.");
+        this.phone = phone;
+        this.phoneVerified = true;
+        this.phoneChannel = channel;
         this.updatedAt = now;
     }
 
@@ -179,6 +209,8 @@ public final class User {
         this.lastName = "Eliminado";
         this.email = new Email("deleted-" + id + "@deleted.invalid");
         this.phone = null;
+        this.phoneVerified = false;
+        this.phoneChannel = null;
         this.avatarUrl = null;
         this.updatedAt = now;
     }
@@ -201,6 +233,8 @@ public final class User {
     public String fullName() { return firstName + " " + lastName; }
     public Email email() { return email; }
     public PhoneNumber phone() { return phone; }
+    public boolean isPhoneVerified() { return phoneVerified; }
+    public PhoneChannel phoneChannel() { return phoneChannel; }
     public String avatarUrl() { return avatarUrl; }
     public boolean isEmailVerified() { return emailVerified; }
     public Instant accountLockedUntil() { return accountLockedUntil; }

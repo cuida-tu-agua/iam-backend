@@ -60,7 +60,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * the JWT checks (real RS256 signature with a test key pair, issuer, denylist).
  * Use cases are mocks: their logic is covered by the application tests.
  */
-@WebMvcTest(controllers = {AuthController.class, ProfileController.class, ActionCodeController.class, InternalUserController.class})
+@WebMvcTest(controllers = {AuthController.class, ProfileController.class, ActionCodeController.class, InternalUserController.class,
+        com.sywater.ms_iam.presentation.controller.PhoneVerificationController.class})
 @TestPropertySource(properties = "iam.internal.api-key=test-internal-key-0123456789")
 @Import({SecurityConfig.class, ApiExceptionHandler.class, InternalKeyGuard.class, HttpContractTest.Keys.class})
 class HttpContractTest {
@@ -93,6 +94,7 @@ class HttpContractTest {
     @MockitoBean RedisTokenRevocationStore revocations;
     @MockitoBean ActionCodeUseCase actionCodes;
     @MockitoBean ContactLookupUseCase contactLookup;
+    @MockitoBean PhoneVerificationUseCase phoneVerification;
 
     private static KeyPair generateKeys() {
         try {
@@ -189,7 +191,7 @@ class HttpContractTest {
     @Test
     void profile_with_a_valid_token_uses_the_sub_claim() throws Exception {
         UUID id = UUID.randomUUID();
-        given(profile.getProfile(id)).willReturn(new UserView(id, "Juan", "Ome", "juan@mail.com", null, null,
+        given(profile.getProfile(id)).willReturn(new UserView(id, "Juan", "Ome", "juan@mail.com", null, false, null, null,
                 true, Set.of("USER"), Instant.parse("2026-09-01T00:00:00Z")));
 
         mvc.perform(get("/api/users/me").header("Authorization", "Bearer " + tokenFor(id, PROPERTIES)))
@@ -249,6 +251,69 @@ class HttpContractTest {
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.email").value("juan@mail.com"))
                 .andExpect(jsonPath("$.fullName").value("Juan Ome"));
+    }
+
+    @Test
+    void internal_contact_carries_the_verified_phone_and_its_mode_for_ms_notification() throws Exception {
+        UUID id = UUID.randomUUID();
+        given(contactLookup.findContact(id)).willReturn(new ContactView(id, "juan@mail.com", "Juan Ome", "+573001112233", true, "WHATSAPP"));
+
+        mvc.perform(get("/internal/users/" + id + "/contact").header("X-Internal-Key", "test-internal-key-0123456789"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phone").value("+573001112233"))
+                .andExpect(jsonPath("$.phoneVerified").value(true))
+                .andExpect(jsonPath("$.phoneChannel").value("WHATSAPP"));
+    }
+
+    // ── HU-028: verify the phone ─────────────────────────────────────────
+
+    @Test
+    void asking_for_a_phone_code_returns_201_with_the_masked_number_and_the_mode() throws Exception {
+        UUID id = UUID.randomUUID();
+        given(phoneVerification.requestCode(eq(id), eq("CO"), eq("3001112233"), eq("WHATSAPP"), any()))
+                .willReturn(new com.sywater.ms_iam.application.dto.PhoneCodeSent("+57300***233", "WHATSAPP", Instant.parse("2026-10-22T15:05:00Z")));
+
+        mvc.perform(post("/api/users/me/phone-verification").header("Authorization", "Bearer " + tokenFor(id, PROPERTIES))
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"country":"CO","phone":"3001112233","channel":"WHATSAPP"}"""))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.maskedPhone").value("+57300***233"))
+                .andExpect(jsonPath("$.channel").value("WHATSAPP"));
+    }
+
+    @Test
+    void a_number_that_does_not_work_for_the_mode_is_422_and_a_missing_field_400() throws Exception {
+        UUID id = UUID.randomUUID();
+        given(phoneVerification.requestCode(eq(id), any(), any(), any(), any()))
+                .willThrow(new com.sywater.ms_iam.domain.exception.PhoneNotReachableException("WHATSAPP"));
+
+        mvc.perform(post("/api/users/me/phone-verification").header("Authorization", "Bearer " + tokenFor(id, PROPERTIES))
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"country":"CO","phone":"3001112233","channel":"WHATSAPP"}"""))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.title").value("phone.not_reachable"));
+
+        mvc.perform(post("/api/users/me/phone-verification").header("Authorization", "Bearer " + tokenFor(id, PROPERTIES))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"country\":\"CO\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.phone").isArray())
+                .andExpect(jsonPath("$.errors.channel").isArray());
+    }
+
+    @Test
+    void confirming_the_phone_returns_the_profile_and_without_a_token_it_is_401() throws Exception {
+        UUID id = UUID.randomUUID();
+        given(phoneVerification.confirm(eq(id), eq("123456"), any())).willReturn(new UserView(id, "Juan", "Ome", "juan@mail.com",
+                "+593991112233", true, "SMS", null, true, Set.of("USER"), Instant.parse("2026-09-01T00:00:00Z")));
+
+        mvc.perform(post("/api/users/me/phone-verification/confirm").header("Authorization", "Bearer " + tokenFor(id, PROPERTIES))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phoneVerified").value(true))
+                .andExpect(jsonPath("$.phoneChannel").value("SMS"));
+
+        mvc.perform(post("/api/users/me/phone-verification/confirm").contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"123456\"}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

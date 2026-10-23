@@ -977,6 +977,18 @@ public class SecurityConfig {
 
 ---
 
+### HU-028: verificar el teléfono (SMS o WhatsApp)
+
+El usuario elige el **país** (CO +57 / EC +593), escribe el número y elige el **modo** (`SMS` o `WHATSAPP`). El código de 6 dígitos (5 min, un solo uso, 5 intentos, 60 s entre pedidos) viaja **por ese modo** a través de ms-notification (`POST /internal/short-messages/verification-code`, `X-Internal-Key`). Al confirmarlo, el número (E.164) y el modo quedan verificados en `security.users` (`phone`, `phone_verified`, `phone_channel`) y las alertas críticas usarán ese modo. Un número que no sirve para ese modo lo rechaza el proveedor, así que nunca queda verificado con él. Cambiar el número desde el perfil quita la verificación.
+
+| Método | Ruta | Cuerpo | Respuestas |
+|---|---|---|---|
+| POST | `/api/users/me/phone-verification` | `{country, phone, channel}` | 201 `{maskedPhone, channel, expiresAt}` · 400 `user.invalid` (país, número o modo) · 409 `auth.phone_already_registered` · 422 `phone.not_reachable` · 429 `auth.code_recently_sent` · 503 `service.unavailable` |
+| POST | `/api/users/me/phone-verification/confirm` | `{code}` | 200 perfil con `phoneVerified` y `phoneChannel` · 400 `auth.invalid_code` (con `remainingAttempts`) / `auth.code_expired` · 409 |
+| GET | `/internal/users/{id}/contact` | — | ahora también `phone`, `phoneVerified`, `phoneChannel` (lo usa ms-notification para enviar la alerta) |
+
+Configuración: `iam.integration.notifications-url` (`NOTIFICATIONS_URL`; vacío = no se pueden verificar teléfonos, 503) e `iam.codes.phone-ttl` (5m).
+
 ## Configuración (application.yml)
 
 ```yaml

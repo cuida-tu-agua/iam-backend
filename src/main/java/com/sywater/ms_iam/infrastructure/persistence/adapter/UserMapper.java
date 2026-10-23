@@ -1,6 +1,7 @@
 package com.sywater.ms_iam.infrastructure.persistence.adapter;
 
 import com.sywater.ms_iam.domain.model.Email;
+import com.sywater.ms_iam.domain.model.PhoneChannel;
 import com.sywater.ms_iam.domain.model.PhoneNumber;
 import com.sywater.ms_iam.domain.model.Role;
 import com.sywater.ms_iam.domain.model.User;
@@ -23,8 +24,9 @@ final class UserMapper {
             } catch (IllegalArgumentException ignored) {
             }
         }
+        PhoneChannel channel = e.getPhoneChannel() == null ? null : PhoneChannel.valueOf(e.getPhoneChannel());
         return User.restore(e.getId(), e.getFirstName(), e.getLastName(), new Email(e.getEmail()),
-                PhoneNumber.ofNullable(e.getPhone()), e.getAvatarUrl(), e.isEmailVerified(),
+                PhoneNumber.ofNullable(e.getPhone()), e.isPhoneVerified(), channel, e.getAvatarUrl(), e.isEmailVerified(),
                 e.getAccountLockedUntil(), e.getBlockedAt(), e.getBlockedBy(), e.getDeletedAt(), e.getCreatedAt(), e.getUpdatedAt(), roles);
     }
 
@@ -33,6 +35,8 @@ final class UserMapper {
         e.setLastName(user.lastName());
         e.setEmail(user.email().value());
         e.setPhone(user.phone() == null ? null : user.phone().value());
+        e.setPhoneVerified(user.isPhoneVerified());
+        e.setPhoneChannel(user.phoneChannel() == null ? null : user.phoneChannel().name());
         e.setAvatarUrl(user.avatarUrl());
         e.setEmailVerified(user.isEmailVerified());
         e.setAccountLockedUntil(user.accountLockedUntil());
