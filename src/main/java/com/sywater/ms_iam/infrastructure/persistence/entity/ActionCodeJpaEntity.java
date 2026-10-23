@@ -40,6 +40,13 @@ public class ActionCodeJpaEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /** HU-028 (PHONE_VERIFY only): the E.164 number and the mode (SMS / WHATSAPP) the code was sent to. */
+    @Column(name = "target_phone", length = 20)
+    private String targetPhone;
+
+    @Column(name = "channel", length = 10)
+    private String channel;
+
     protected ActionCodeJpaEntity() {
     }
 
@@ -53,6 +60,15 @@ public class ActionCodeJpaEntity {
         return e;
     }
 
+    /** HU-028: a code that verifies {@code targetPhone}, sent by {@code channel}. */
+    public static ActionCodeJpaEntity createForPhone(UUID userId, String tokenHash, String targetPhone, String channel,
+                                                     Instant expiresAt, Instant now) {
+        ActionCodeJpaEntity e = create(userId, "PHONE_VERIFY", tokenHash, expiresAt, now);
+        e.targetPhone = targetPhone;
+        e.channel = channel;
+        return e;
+    }
+
     public Long getId() { return id; }
     public UUID getUserId() { return userId; }
     public String getAction() { return action; }
@@ -61,4 +77,6 @@ public class ActionCodeJpaEntity {
     public Instant getUsedAt() { return usedAt; }
     public int getFailedAttempts() { return failedAttempts; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getTargetPhone() { return targetPhone; }
+    public String getChannel() { return channel; }
 }

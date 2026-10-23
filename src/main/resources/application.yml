@@ -38,6 +38,7 @@ iam:
   integration:
     devices-url: ${DEVICES_URL:http://localhost:3003}   # ms-device: HU-008 unlinks the devices of a deleted account (empty = only a log line); HU-062 metrics
     places-url: ${PLACES_URL:http://localhost:3002}     # ms-places: HU-062 metrics (empty = the places section is reported as unavailable)
+    notifications-url: ${NOTIFICATIONS_URL:http://localhost:3006}   # ms-notification: HU-028 sends the phone verification code by SMS / WhatsApp (empty = phones cannot be verified, 503)
   jwt:
     issuer: https://iam.cuidatuagua.local
     key-id: iam-key-1
@@ -51,6 +52,7 @@ iam:
     reset-ttl: 15m
     max-attempts: 5
     resend-cooldown: 60s
+    phone-ttl: 5m                          # HU-028 code that verifies the phone (SMS / WhatsApp)
   lockout:
     max-attempts: 5
     duration: 15m
