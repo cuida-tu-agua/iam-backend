@@ -15,11 +15,20 @@ import org.springframework.web.util.HtmlUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Component
 public class SmtpNotificationSender implements NotificationSender {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpNotificationSender.class);
+
+    private static final DateTimeFormatter DATE =
+            DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.forLanguageTag("es-CO")).withZone(ZoneId.of("America/Bogota"));
 
     private final JavaMailSender mail;
     private final IamProperties properties;
@@ -61,6 +70,36 @@ public class SmtpNotificationSender implements NotificationSender {
                         + "</b> desde tu cuenta de Cuida Tu Agua. Para confirmarlo, escribe este código en la app:",
                 code, "Vence en " + humanize(validFor) + " y solo sirve una vez. Si no fuiste tú, NO lo compartas "
                         + "y cambia tu contraseña: alguien podría estar usando tu cuenta.");
+    }
+
+    @Override
+    public void sendCollaboratorInvitation(Email to, String placeName, String invitedByName, List<String> permissions,
+                                           Instant expiresAt) {
+        // Names come from other users: one line only, so they cannot add headers to the e-mail
+        String plainWho = invitedByName == null || invitedByName.isBlank() ? "Alguien" : oneLine(invitedByName);
+        String who = HtmlUtils.htmlEscape(plainWho);
+        String what = permissions.stream().map(SmtpNotificationSender::describe).collect(Collectors.joining(", "));
+        send(to, plainWho + " te invitó a colaborar en \"" + oneLine(placeName) + "\"",
+                "Te invitaron a colaborar",
+                who + " te invitó a colaborar en el lugar <b>" + HtmlUtils.htmlEscape(placeName) + "</b> de Cuida Tu Agua. "
+                        + "Podrás: " + HtmlUtils.htmlEscape(what) + ". Abre la app con esta misma dirección de correo y "
+                        + "acepta la invitación desde tus invitaciones.",
+                null, "La invitación vence el " + DATE.format(expiresAt) + ". Si no conoces a quien te invita, ignora este correo.");
+    }
+
+    private static String oneLine(String text) {
+        return text.replaceAll("[\\p{Cntrl}]+", " ").trim();
+    }
+
+    private static String describe(String permission) {
+        return switch (permission) {
+            case "VIEW_CONSUMPTION" -> "ver el consumo de agua";
+            case "VIEW_DEVICE_STATUS" -> "ver el estado del dispositivo";
+            case "CONTROL_VALVE" -> "abrir y cerrar la válvula";
+            case "VIEW_ALERTS" -> "recibir y ver las alertas";
+            case "VIEW_BILLS" -> "ver las tarifas y el costo";
+            default -> permission.toLowerCase(Locale.ROOT).replace('_', ' ');
+        };
     }
 
     private void send(Email to, String subject, String title, String intro, String code, String footer) {
