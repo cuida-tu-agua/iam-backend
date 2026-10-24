@@ -24,7 +24,8 @@ spring:
       host: localhost
       port: 6379
       timeout: 2s
-  mail:                                    # Mailpit in development: http://localhost:8025
+  mail:           
+                         # Mailpit in development: http://localhost:8025
     host: localhost
     port: 1025
   servlet:
@@ -61,6 +62,7 @@ iam:
     max-bytes: 2097152
   mail:
     from: "Cuida Tu Agua <no-reply@cuidatuagua.local>"
+    app-url: ${IAM_MAIL_APP_URL:http://localhost:8082}
   cors-allowed-origins:
     - http://localhost:19006
     - http://localhost:8081
