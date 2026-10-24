@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -25,6 +26,14 @@ public class InternalUserController {
     public InternalUserController(ContactLookupUseCase contacts, InternalKeyGuard guard) {
         this.contacts = contacts;
         this.guard = guard;
+    }
+
+    /** ms-places looks for the account behind an e-mail (collaborator invitations). 404 = nobody usable has it. */
+    @GetMapping("/by-email")
+    public ContactView byEmail(@RequestParam("email") String email,
+                               @RequestHeader(value = InternalKeyGuard.HEADER, required = false) String key) {
+        guard.require(key);
+        return contacts.findContactByEmail(email);
     }
 
     /** ms-notification asks where to write to a user. 404 only when the user has no usable contact. */

@@ -60,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * the JWT checks (real RS256 signature with a test key pair, issuer, denylist).
  * Use cases are mocks: their logic is covered by the application tests.
  */
-@WebMvcTest(controllers = {AuthController.class, ProfileController.class, ActionCodeController.class, InternalUserController.class,
+@WebMvcTest(controllers = {AuthController.class, ProfileController.class, ActionCodeController.class, InternalUserController.class, com.sywater.ms_iam.presentation.controller.InternalInvitationController.class,
         com.sywater.ms_iam.presentation.controller.PhoneVerificationController.class})
 @TestPropertySource(properties = "iam.internal.api-key=test-internal-key-0123456789")
 @Import({SecurityConfig.class, ApiExceptionHandler.class, InternalKeyGuard.class, HttpContractTest.Keys.class})
@@ -94,6 +94,7 @@ class HttpContractTest {
     @MockitoBean RedisTokenRevocationStore revocations;
     @MockitoBean ActionCodeUseCase actionCodes;
     @MockitoBean ContactLookupUseCase contactLookup;
+    @MockitoBean com.sywater.ms_iam.application.port.in.InvitationEmailUseCase invitationEmails;
     @MockitoBean PhoneVerificationUseCase phoneVerification;
 
     private static KeyPair generateKeys() {
@@ -263,6 +264,51 @@ class HttpContractTest {
                 .andExpect(jsonPath("$.phone").value("+573001112233"))
                 .andExpect(jsonPath("$.phoneVerified").value(true))
                 .andExpect(jsonPath("$.phoneChannel").value("WHATSAPP"));
+    }
+
+    @Test
+    void internal_contact_by_email_finds_the_account_for_ms_places() throws Exception {
+        UUID id = UUID.randomUUID();
+        given(contactLookup.findContactByEmail("ana@mail.com")).willReturn(new ContactView(id, "ana@mail.com", "Ana Gil"));
+
+        mvc.perform(get("/internal/users/by-email").param("email", "ana@mail.com")
+                        .header("X-Internal-Key", "test-internal-key-0123456789"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.fullName").value("Ana Gil"));
+    }
+
+    @Test
+    void internal_contact_by_email_is_404_when_nobody_has_it_and_403_without_the_key() throws Exception {
+        given(contactLookup.findContactByEmail("nadie@mail.com")).willThrow(new UserNotFoundException());
+
+        mvc.perform(get("/internal/users/by-email").param("email", "nadie@mail.com")
+                        .header("X-Internal-Key", "test-internal-key-0123456789"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/internal/users/by-email").param("email", "nadie@mail.com"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("auth.internal_only"));
+    }
+
+    @Test
+    void the_invitation_email_is_accepted_with_the_internal_key() throws Exception {
+        mvc.perform(post("/internal/invitation-emails").header("X-Internal-Key", "test-internal-key-0123456789")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"invitationId\":\"" + UUID.randomUUID() + "\",\"to\":\"ana@mail.com\",\"placeName\":\"Casa\","
+                                + "\"invitedByName\":\"Olga\",\"permissions\":[\"VIEW_CONSUMPTION\"],\"expiresAt\":\"2026-10-16T15:00:00Z\"}"))
+                .andExpect(status().isAccepted());
+        org.mockito.Mockito.verify(invitationEmails).send(any());
+    }
+
+    @Test
+    void the_invitation_email_needs_the_key_and_a_valid_body() throws Exception {
+        String body = "{\"to\":\"ana@mail.com\",\"placeName\":\"Casa\",\"permissions\":[],\"expiresAt\":\"2026-10-16T15:00:00Z\"}";
+        mvc.perform(post("/internal/invitation-emails").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/internal/invitation-emails").header("X-Internal-Key", "test-internal-key-0123456789")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"to\":\"\",\"placeName\":\"Casa\"}"))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(invitationEmails);
     }
 
     // ── HU-028: verify the phone ─────────────────────────────────────────
