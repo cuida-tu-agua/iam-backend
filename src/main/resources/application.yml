@@ -24,8 +24,7 @@ spring:
       host: localhost
       port: 6379
       timeout: 2s
-  mail:           
-                         # Mailpit in development: http://localhost:8025
+  mail:                                    # Mailpit in development: http://localhost:8025
     host: localhost
     port: 1025
   servlet:
