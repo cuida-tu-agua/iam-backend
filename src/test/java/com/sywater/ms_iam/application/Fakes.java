@@ -254,6 +254,10 @@ public final class Fakes {
         }
         @Override public void sendActionCode(Email to, String firstName, String action, String code, Duration validFor) {
             sent.add(new Sent("ACTION", to.value(), code)); }
+        @Override public void sendCollaboratorInvitation(Email to, String placeName, String invitedByName,
+                                                         java.util.List<String> permissions, java.time.Instant expiresAt) {
+            sent.add(new Sent("INVITATION", to.value(), placeName));
+        }
 
         public String lastCode() { return sent.get(sent.size() - 1).code(); }
     }
