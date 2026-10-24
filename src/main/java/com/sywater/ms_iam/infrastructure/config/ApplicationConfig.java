@@ -117,6 +117,11 @@ public class ApplicationConfig {
     }
 
     @Bean
+    InvitationEmailService invitationEmailService(NotificationSender notifications) {
+        return new InvitationEmailService(notifications);
+    }
+
+    @Bean
     ActionCodeService actionCodeService(UserRepository users, OneTimeCodes codes, NotificationSender notifications,
                                         ActivityLog activity, @Value("${iam.codes.action-ttl:5m}") Duration validFor,
                                         Clock clock) {
